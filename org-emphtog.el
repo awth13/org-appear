@@ -1,8 +1,9 @@
-;; Original work Copyright (C) 2020 Benjamin Levy - MIT/X11 License
-;; Emphasis marker modification Copyright (C) 2021 Alice Istleyeva - MIT License
+;; Portions of code in this file are taken from org-fragtog https://github.com/io12/org-fragtog
+;; org-fragtog Copyright (C) 2020 Benjamin Levy - MIT/X11 License
+;; org-emphtog Copyright (C) 2021 Alice Istleyeva - MIT License
 ;; Author: Alice Istleyeva <awth13@gmail.com>
 ;; Description: Toggle Org mode emphasis markers upon entering and leaving an emphasised fragment
-;; Homepage: https://github.com/io12/org-fragtog
+;; Homepage: https://github.com/awth13/org-emphtog
 
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
 ;; of this software and associated documentation files (the "Software"), to deal
@@ -53,15 +54,15 @@ on a fragment. This is used to track when the cursor leaves a fragment.")
 (defun org-emphtog--set-emph-re ()
   "Construct the emphasis/verbatim regular expression. Similar to
 `org-set-emph-re' in org-mode but without the after-markers capture group."
-    (pcase-let*
-	((`(,pre ,post ,border ,body ,nl) org-emphasis-regexp-components)
-	 (body (if (<= nl 0) body
-		 (format "%s*?\\(?:\n%s*?\\)\\{0,%d\\}" body body nl)))
-	 (template
-	  (format (concat "\\([%s]\\|^\\)"
-			  "\\(\\([%%s]\\)\\([^%s]\\|[^%s]%s[^%s]\\)\\3\\)")
-		  pre border border body border)))
-      (setq org-emphtog--emph-re (format template "*/_+=~"))))
+  (pcase-let*
+      ((`(,pre ,post ,border ,body ,nl) org-emphasis-regexp-components)
+       (body (if (<= nl 0) body
+	       (format "%s*?\\(?:\n%s*?\\)\\{0,%d\\}" body body nl)))
+       (template
+	(format (concat "\\([%s]\\|^\\)"
+			"\\(\\([%%s]\\)\\([^%s]\\|[^%s]%s[^%s]\\)\\3\\)")
+		pre border border body border)))
+    (setq org-emphtog--emph-re (format template "*/_+=~"))))
 
 (defun org-emphtog--post-cmd ()
   "This function is executed by `post-command-hook' in `org-emphtog-mode'.
@@ -87,7 +88,7 @@ an emphasised fragment, else return nil."
 	   (verbatim? (member marker '("~" "=")))
 	   (start (match-beginning 2))
 	   (end (match-end 2)))
-      ;; Code adapted from org-mode-emphasis-faces
+      ;; Code adapted from org-do-emphasis-faces
       (when (save-excursion
 	      (goto-char start)
 	      (and
