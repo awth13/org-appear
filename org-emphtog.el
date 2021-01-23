@@ -50,8 +50,8 @@ on a fragment. This is used to track when the cursor leaves a fragment.")
 It handles toggling fragments depending on whether the cursor entered or exited them."
   ;; Do nothing if markers are not hidden
   (when org-hide-emphasis-markers
-    (let* ((prev-frag org-emphtog--prev-frag)
-	   (current-frag (org-emphtog--current-frag)))
+    (let ((prev-frag org-emphtog--prev-frag)
+	  (current-frag (org-emphtog--current-frag)))
 
       ;; Do nothing if fragment did not change
       (when (not (equal prev-frag current-frag))
@@ -77,16 +77,16 @@ an emphasised fragment, else return nil."
 (defun org-emphtog--show-markers (frag)
   "Silently remove invisible property from markers."
   (with-silent-modifications
-    (let* ((start (car frag))
-	   (end (cdr frag)))
+    (let ((start (car frag))
+	  (end (cdr frag)))
       (remove-text-properties start (1+ start) '(invisible org-link))
       (remove-text-properties (1- end) end '(invisible org-link)))))
 
 (defun org-emphtog--hide-markers (frag)
-  "Silently add invisible property to markers"
+  "Silently add invisible property to markers."
   (with-silent-modifications
-    (let* ((start (car frag))
-	   (end (cdr frag)))
+    (let ((start (car frag))
+	  (end (cdr frag)))
       (put-text-property start (1+ start) 'invisible 'org-link)
       (put-text-property (1- end) end 'invisible 'org-link))))
 

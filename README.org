@@ -1,0 +1,36 @@
+* ~org-emphtog~
+
+Automatically toggle visibility of emphasis and verbatim markers upon entering and leaving an emphasised fragment.
+
+** About
+
+[[https://orgmode.org/][Org mode]] provides a way to toggle visibility of emphasis markers with ~org-hide-emphasis-markers~. However, it is currently not possible to do this interactively -- users have to reload Org buffers for the setting to take effect. This package, heavily inspired by [[https://github.com/io12/org-fragtog][org-fragtog]], enables automatic visibility toggling depending on the cursor position. Emphasis (verbatim) markers are shown when the cursor enters an emphasised (verbatim) fragment and hidden when the cursor leaves.
+
+** Installation
+
+If ~use-package~ is used, ~org-emphtog~ can be loaded as follows.
+
+#+begin_src emacs-lisp
+
+  (use-package org-emphtog
+    :load-path "/path/to/org-emphtog-dir")
+
+#+end_src
+
+Alternatively, using ~require~,
+
+#+begin_src emacs-lisp
+
+  (require 'org-emphtog "/path/to/org-emphtog.el")
+
+#+end_src
+
+The package can be enabled interactively or automatically on org-mode start-up:
+
+#+begin_src emacs-lisp
+
+  (add-hook 'org-mode-hook 'org-emphtog-mode)
+
+#+end_src
+
+*Note:* if ~org-hide-emphasis-markers~ is set to nil, the package does nothing.
