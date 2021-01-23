@@ -34,6 +34,7 @@ cursor leaves the fragment. If `org-hide-emphasis-markers' is nil, the mode does
   (when org-hide-emphasis-markers
     (cond
      (org-emphtog-mode
+      (org-emphtog--set-emph-re)
       (add-hook 'post-command-hook #'org-emphtog--post-cmd nil t))
      ;; When disabled, clean up by hiding markers around current fragment, if any
      (t
@@ -45,6 +46,22 @@ cursor leaves the fragment. If `org-hide-emphasis-markers' is nil, the mode does
 (defvar-local org-emphtog--prev-frag nil
   "Previous fragment that surrounded the cursor, or nil if the cursor was not
 on a fragment. This is used to track when the cursor leaves a fragment.")
+
+(defvar org-emphtog--emph-re nil
+  "Regular expression for matching emphasised and verbatim fragments.")
+
+(defun org-emphtog--set-emph-re ()
+  "Construct the emphasis/verbatim regular expression. Similar to
+`org-set-emph-re' in org-mode but without the after-markers capture group."
+    (pcase-let*
+	((`(,pre ,post ,border ,body ,nl) org-emphasis-regexp-components)
+	 (body (if (<= nl 0) body
+		 (format "%s*?\\(?:\n%s*?\\)\\{0,%d\\}" body body nl)))
+	 (template
+	  (format (concat "\\([%s]\\|^\\)"
+			  "\\(\\([%%s]\\)\\([^%s]\\|[^%s]%s[^%s]\\)\\3\\)")
+		  pre border border body border)))
+      (setq org-emphtog--emph-re (format template "*/_+=~"))))
 
 (defun org-emphtog--post-cmd ()
   "This function is executed by `post-command-hook' in `org-emphtog-mode'.
@@ -65,12 +82,29 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 (defun org-emphtog--current-frag ()
   "Return a cons cell with locations of emphasis markers if cursor is inside
 an emphasised fragment, else return nil."
-  ;; org-in-regexp may add extra chars to match string,
-  ;; hence the use of match-beginning/end to get precise marker locations
-  (when (or (org-in-regexp org-emph-re 0 t)
-	    (org-in-regexp org-verbatim-re 0 t))
-    (cons (match-beginning 2)
-	  (match-end 2))))
+  (when (org-in-regexp org-emphtog--emph-re 0 t)
+    (let* ((marker (match-string 3))
+	   (verbatim? (member marker '("~" "=")))
+	   (start (match-beginning 2))
+	   (end (match-end 2)))
+      ;; Code adapted from org-mode-emphasis-faces
+      (when (save-excursion
+	      (goto-char start)
+	      (and
+	       ;; Do not match table hlines.
+	       (not (and (equal marker "+")
+			 (org-match-line
+			  "[ \t]*\\(|[-+]+|?\\|\\+[-+]+\\+\\)[ \t]*$")))
+	       ;; Do not match headline stars.  Do not consider
+	       ;; stars of a headline as closing marker for bold
+	       ;; markup either.
+	       (not (and (equal marker "*")
+			 (looking-at-p org-outline-regexp-bol)))
+	       ;; Do not match text without the after-markers capture group
+	       (save-excursion
+		 (backward-char)
+		 (looking-at-p (if verbatim? org-verbatim-re org-emph-re)))))
+	(cons start end)))))
 
 (defun org-emphtog--show-markers (frag)
   "Silently remove invisible property from markers."
