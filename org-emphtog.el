@@ -28,18 +28,19 @@
 (define-minor-mode org-emphtog-mode
   "A minor mode that automatically toggles visibility of emphasis markers in Org mode.
 Markers are shown when the cursor enters an emphasised fragment and hidden when the
-cursor leaves the fragment. If 'org-hide-emphasis-markers' is nil, the mode does nothing."
+cursor leaves the fragment. If `org-hide-emphasis-markers' is nil, the mode does not load."
   nil nil nil
 
-  (cond
-   (org-emphtog-mode
-    (add-hook 'post-command-hook #'org-emphtog--post-cmd nil t))
-   ;; When disabled, clean up by hiding markers around current fragment, if any
-   (t
-    (let ((current-frag (org-emphtog--current-frag)))
-      (when current-frag
-	(org-emphtog--hide-markers current-frag)))
-    (remove-hook 'post-command-hook #'org-emphtog--post-cmd t))))
+  (when org-hide-emphasis-markers
+    (cond
+     (org-emphtog-mode
+      (add-hook 'post-command-hook #'org-emphtog--post-cmd nil t))
+     ;; When disabled, clean up by hiding markers around current fragment, if any
+     (t
+      (let ((current-frag (org-emphtog--current-frag)))
+	(when current-frag
+	  (org-emphtog--hide-markers current-frag)))
+      (remove-hook 'post-command-hook #'org-emphtog--post-cmd t)))))
 
 (defvar-local org-emphtog--prev-frag nil
   "Previous fragment that surrounded the cursor, or nil if the cursor was not
@@ -48,21 +49,18 @@ on a fragment. This is used to track when the cursor leaves a fragment.")
 (defun org-emphtog--post-cmd ()
   "This function is executed by `post-command-hook' in `org-emphtog-mode'.
 It handles toggling fragments depending on whether the cursor entered or exited them."
-  ;; Do nothing if markers are not hidden
-  (when org-hide-emphasis-markers
-    (let ((prev-frag org-emphtog--prev-frag)
-	  (current-frag (org-emphtog--current-frag)))
-
-      ;; Do nothing if fragment did not change
-      (when (not (equal prev-frag current-frag))
-	;; Current fragment is the new previous
-	(setq org-emphtog--prev-frag current-frag)
-	;; Hide markers in previous fragment, if any
-	(when prev-frag
-	  (org-emphtog--hide-markers prev-frag))
-	;; Show markers in current fragment, if any
-	(when current-frag
-	  (org-emphtog--show-markers current-frag))))))
+  (let ((prev-frag org-emphtog--prev-frag)
+	(current-frag (org-emphtog--current-frag)))
+    ;; Do nothing if fragment did not change
+    (when (not (equal prev-frag current-frag))
+      ;; Current fragment is the new previous
+      (setq org-emphtog--prev-frag current-frag)
+      ;; Hide markers in previous fragment, if any
+      (when prev-frag
+	(org-emphtog--hide-markers prev-frag))
+      ;; Show markers in current fragment, if any
+      (when current-frag
+	(org-emphtog--show-markers current-frag)))))
 
 (defun org-emphtog--current-frag ()
   "Return a cons cell with locations of emphasis markers if cursor is inside
