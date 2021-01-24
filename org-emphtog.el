@@ -1,3 +1,5 @@
+;;; org-emphtog.el --- Auto-toggle Org emphasis markers -*- lexical-binding: t; -*-
+
 ;; Portions of code in this file are taken from org-fragtog https://github.com/io12/org-fragtog
 ;; org-fragtog Copyright (C) 2020 Benjamin Levy - MIT/X11 License
 ;; org-emphtog Copyright (C) 2021 Alice Istleyeva - MIT License
@@ -23,7 +25,16 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
+;;; Commentary:
+
+;; This package enabes automatic toggling of Org emphasis markers depending on cursor position.
+;; Emphasis (verbatim) markers are shown when the cursor enters an emphasised fragment
+;; and hidden when the cursor leaves the fragment.
+
+;;; Code:
+
 (require 'org)
+(require 'org-element)
 
 ;;;###autoload
 (define-minor-mode org-emphtog-mode
@@ -66,8 +77,7 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	(org-emphtog--show-markers (org-emphtog--get-position current-frag))))))
 
 (defun org-emphtog--current-frag ()
-  "Return the start position and type of emphasised fragment
-if cursor is inside one, else return nil."
+  "Return the start position and type of emphasised fragment if cursor is inside one."
   (let* ((elem (org-element-context))
 	 (elem-type (car elem))
 	 (elem-start (org-element-property :begin elem)))
@@ -81,8 +91,7 @@ if cursor is inside one, else return nil."
       nil)))
 
 (defun org-emphtog--get-position (frag)
-  "Return correct position of opening and closing emphasis markers
-of an emphasised fragment FRAG."
+  "Return consed positions of opening and closing emphasis markers of an emphasised fragment FRAG."
   (let ((start (car frag))
 	(verbatim? (member (cdr frag) '(verbatim code))))
     (save-excursion
@@ -107,3 +116,4 @@ of an emphasised fragment FRAG."
       (put-text-property (1- end) end 'invisible 'org-link))))
 
 (provide 'org-emphtog)
+;;; org-emphtog.el ends here
