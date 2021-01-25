@@ -36,6 +36,11 @@
 (require 'org)
 (require 'org-element)
 
+(defcustom org-emphtog-manual nil
+  "Non-nil means that automatic toggling is disabled."
+  :type 'boolean
+  :group 'org)
+
 ;;;###autoload
 (define-minor-mode org-emphtog-mode
   "A minor mode that automatically toggles visibility of emphasis markers in Org mode.
@@ -43,7 +48,8 @@ Markers are shown when the cursor enters an emphasised fragment and hidden when 
 cursor leaves the fragment. If `org-hide-emphasis-markers' is nil, the mode does not load."
   nil nil nil
 
-  (when org-hide-emphasis-markers
+  (when (and org-hide-emphasis-markers
+	     (not org-emphtog-manual))
     (cond
      (org-emphtog-mode
       (add-hook 'post-command-hook #'org-emphtog--post-cmd nil t))
@@ -123,6 +129,15 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	(with-silent-modifications
 	  (put-text-property start (1+ start) 'invisible 'org-link)
 	  (put-text-property (1- end) end 'invisible 'org-link))))))
+
+(defun org-emphtog-at-point ()
+  "Toggle emphasis markers at point."
+  (interactive)
+  (let ((current-frag (org-emphtog--current-frag)))
+    (when current-frag
+      (if (get-text-property (car current-frag) 'invisible)
+	  (org-emphtog--show-markers (org-emphtog--get-position current-frag))
+	(org-emphtog--hide-markers (org-emphtog--get-position current-frag))))))
 
 (provide 'org-emphtog)
 ;;; org-emphtog.el ends here
