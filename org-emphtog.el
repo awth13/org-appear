@@ -101,19 +101,28 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 
 (defun org-emphtog--show-markers (match)
   "Silently remove invisible property from markers at MATCH."
-  (with-silent-modifications
-    (let ((start (car match))
-	  (end (cdr match)))
-      (remove-text-properties start (1+ start) '(invisible org-link))
-      (remove-text-properties (1- end) end '(invisible org-link)))))
+  (let ((start (car match))
+	(end (cdr match)))
+    (catch 'passed-nil
+      (if (eq start nil)
+	  (throw 'passed-nil nil)
+	(with-silent-modifications
+	  (remove-text-properties start (1+ start) '(invisible org-link))
+	  (remove-text-properties (1- end) end '(invisible org-link)))))))
 
 (defun org-emphtog--hide-markers (match)
   "Silently add invisible property to markers at MATCH."
-  (with-silent-modifications
-    (let ((start (car match))
-	  (end (cdr match)))
-      (put-text-property start (1+ start) 'invisible 'org-link)
-      (put-text-property (1- end) end 'invisible 'org-link))))
+  (let ((start (car match))
+	(end (cdr match)))
+    ;; If an emphasis marker is deleted when the cursor is inside an emphasised fragment,
+    ;; `org-emphtog--hide-markers' is called with nil as an argument
+    ;; TODO: a more robust fix
+    (catch 'passed-nil
+      (if (eq start nil)
+	  (throw 'passed-nil nil)
+	(with-silent-modifications
+	  (put-text-property start (1+ start) 'invisible 'org-link)
+	  (put-text-property (1- end) end 'invisible 'org-link))))))
 
 (provide 'org-emphtog)
 ;;; org-emphtog.el ends here
