@@ -34,36 +34,63 @@
 (require 'org)
 (require 'org-element)
 
-;; TODO: Manual toggling
-;; (defcustom org-appear-manual nil
-;;   "Non-nil means that automatic toggling is disabled."
-;;   :type 'boolean
-;;   :group 'org)
-;;
-;; (defun org-appear-at-point ()
-;;   "Toggle fragment at point."
-;;   (interactive)
-;;   (let ((current-frag (org-appear--current-frag)))
-;;     (when current-frag
-;;       (org-appear--toggle current-frag))))
+(defgroup org-appear nil
+  "Auto-toggle Org fragments"
+  :group 'org)
 
-;; TODO: Custom settings per-type
+(defcustom org-appear-autoemphasis t
+  "Non-nil enables automatic toggling of emphasised and verbatim fragments.
+Does not have an effect if `org-hide-emphasis-markers' is nil."
+  :type 'boolean
+  :group 'org-appear)
+
+(defcustom org-appear-autolinks nil
+  "Non-nil enables automatic toggling of links.
+Does not have an effect if `org-link-descriptive' is nil."
+  :type 'boolean
+  :group 'org-appear)
+
+(defcustom org-appear-autolatex nil
+  "Non-nil enables automatic toggling of LaTeX fragments."
+  :type 'boolean
+  :group 'org-appear)
 
 ;;;###autoload
 (define-minor-mode org-appear-mode
-  "A minor mode that automatically toggles fragments in Org mode.
-Markers are shown when the cursor enters an emphasised fragment and hidden when the
-cursor leaves the fragment."
+  "A minor mode that automatically toggles fragments in Org mode."
   nil nil nil
 
   (cond
    (org-appear-mode
+    (org-appear--set-fragments)
     (add-hook 'post-command-hook #'org-appear--post-cmd nil t))
    (t
     (let ((current-frag (org-appear--current-frag)))
       (when current-frag
 	(org-appear--disable current-frag)))
     (remove-hook 'post-command-hook #'org-appear--post-cmd t))))
+
+(defvar org-appear-fragments nil
+  "List of Org fragments to toggle.")
+
+(defun org-appear--set-fragments ()
+  "Add designated fragments to toggle to `org-appear-fragments'."
+  (let ((emph-fragments '(bold
+			  italic
+			  underline
+			  strike-through
+			  verbatim
+			  code))
+	(latex-fragments '(latex-fragment
+			   latex-environment))
+	(link-fragments '(link)))
+    (setq org-appear-fragments nil)
+    (when (and org-hide-emphasis-markers org-appear-autoemphasis)
+      (setq org-appear-fragments (append org-appear-fragments emph-fragments)))
+    (when org-appear-autolatex
+      (setq org-appear-fragments (append org-appear-fragments latex-fragments)))
+    (when (and org-link-descriptive org-appear-autolinks)
+      (setq org-appear-fragments (append org-appear-fragments link-fragments)))))
 
 (defvar-local org-appear--prev-frag nil
   "Previous fragment that surrounded the cursor, or nil if the cursor was not
@@ -91,15 +118,7 @@ It handles toggling fragments depending on whether the cursor entered or exited 
   "Return element list of fragment at point.
 Return nil if element is not supported by `org-appear-mode'."
   (let ((elem (org-element-context)))
-    (if (member (car elem) '(bold
-			     italic
-			     underline
-			     strike-through
-			     verbatim
-			     code
-			     latex-fragment
-			     latex-environment
-			     link))
+    (if (member (car elem) org-appear-fragments)
 	elem
       nil)))
 
@@ -208,6 +227,19 @@ TODO: Extracted info."
   "Disable preview of the LaTeX fragment at POS."
   (org-clear-latex-preview (plist-get frag 'start)
 			   (plist-get frag 'end)))
+
+;; TODO: Manual toggling
+;; (defcustom org-appear-manual nil
+;;   "Non-nil means that automatic toggling is disabled."
+;;   :type 'boolean
+;;   :group 'org)
+;;
+;; (defun org-appear-at-point ()
+;;   "Toggle fragment at point."
+;;   (interactive)
+;;   (let ((current-frag (org-appear--current-frag)))
+;;     (when current-frag
+;;       (org-appear--toggle current-frag))))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
