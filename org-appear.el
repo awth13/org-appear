@@ -73,9 +73,9 @@ on a fragment. This is used to track when the cursor leaves a fragment.")
   "This function is executed by `post-command-hook' in `org-appear-mode'.
 It handles toggling fragments depending on whether the cursor entered or exited them."
   (let* ((prev-frag org-appear--prev-frag)
-	 (prev-frag-start (car prev-frag))
+	 (prev-frag-start (org-element-property :begin prev-frag))
 	 (current-frag (org-appear--current-frag))
-	 (current-frag-start (car current-frag)))
+	 (current-frag-start (org-element-property :begin current-frag)))
     ;; Do nothing if fragment did not change
     (when (not (equal prev-frag-start current-frag-start))
       ;; Current fragment is the new previous
@@ -88,75 +88,84 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	(org-appear--enable current-frag)))))
 
 (defun org-appear--current-frag ()
-  "Return start position, end position, and type of a fragment if cursor is inside one."
-  (let* ((elem (org-element-context))
-	 (elem-type (car elem))
+  "Return element list of fragment at point.
+Return nil if element is not supported by `org-appear-mode'."
+  (let ((elem (org-element-context)))
+    (if (member (car elem) '(bold
+			     italic
+			     underline
+			     strike-through
+			     verbatim
+			     code
+			     latex-fragment
+			     latex-environment
+			     link))
+	elem
+      nil)))
+
+(defun org-appear--parse-elem (elem)
+  "Parse element ELEM.
+TODO: Extracted info."
+  (let* ((elem-type (car elem))
 	 (elem-start (org-element-property :begin elem))
-	 (elem-end (org-element-property :end elem)))
+	 (elem-end (org-element-property :end elem))
+	 (post-elem-spaces (org-element-property :post-blank elem))
+	 (elem-end-real (- elem-end post-elem-spaces)))
     (cond ((member elem-type '(bold
 			       italic
 			       underline
-			       strike-through))
-	   (list elem-start elem-end 'emph))
-	  ((member elem-type '(verbatim
+			       strike-through
+			       verbatim
 			       code))
-	   (list elem-start elem-end 'verbatim))
+	   (list 'start elem-start
+		 'end elem-end-real
+		 'visible-start (1+ elem-start)
+		 'visible-end (1- elem-end-real)
+		 'type 'emph))
 	  ((member elem-type '(latex-fragment
-			       latex-environment))
-	   (list elem-start elem-end 'latex))
+			       latex-environmet))
+	   (list 'start elem-start
+		 'end elem-end-real
+		 'type 'latex))
 	  ((equal elem-type 'link)
-	   (list elem-start elem-end 'link))
+	   (let ((visible-start (org-element-property :contents-begin elem))
+		 (visible-end (org-element-property :contents-end elem)))
+	     (list 'start elem-start
+		   'end elem-end-real
+		   'visible-start (if visible-start
+				      visible-start
+				    (+ elem-start 2))
+		   'visible-end (if visible-end
+				    visible-end
+				  (- elem-end-real 2))
+		   'type 'link)))
 	  (t nil))))
 
-(defun org-appear--frag-pos (frag)
-  "Return positions of fragment FRAG."
-  (let ((start (car frag))
-	(end (cadr frag))
-	(type (caddr frag)))
-    (cond ((equal type 'link)
-	   (save-excursion
-	     (goto-char start)
-	     (when (looking-at org-link-any-re)
-	       (let ((start (match-beginning 0))
-		     (end (match-end 0))
-		     (visible-start (or (match-beginning 3) (match-beginning 2)))
-		     (visible-end (or (match-end 3) (match-end 2))))
-		 (list start end visible-start visible-end)))))
-	  ((equal type 'latex)
-	   (list start end))
-	  (t
-	   (save-excursion
-	     (goto-char (1- start))
-	     (when (looking-at (if (equal type 'verbatim) org-verbatim-re org-emph-re))
-	       (let* ((start (match-beginning 2))
-		      (end (match-end 2))
-		      (visible-start (1+ start))
-		      (visible-end (1- end)))
-		 (list start end visible-start visible-end))))))))
+(defun org-appear--enable (elem)
+  "Enable visibility of element ELEM."
+  (let ((frag-props (org-appear--parse-elem elem)))
+    (pcase (plist-get frag-props 'type)
+      ('latex
+       (org-appear--hide-latex-preview frag-props))
+      ((or 'emph 'link)
+       (org-appear--show-invisible frag-props)))))
 
-(defun org-appear--enable (frag)
-  "Enable visibility of fragment FRAG."
-  (let ((type (caddr frag)))
-    (cond ((equal type 'latex)
-	   (org-appear--hide-latex-preview (org-appear--frag-pos frag)))
-	  (t
-	   (org-appear--show-invisible (org-appear--frag-pos frag))))))
+(defun org-appear--disable (elem)
+  "Disable visibility of element ELEM."
+  (let ((frag-props (org-appear--parse-elem elem)))
+    (pcase (plist-get frag-props 'type)
+      ('latex
+       (org-appear--show-latex-preview frag-props))
+      ((or 'emph 'link)
+       (org-appear--hide-invisible frag-props)))))
 
-(defun org-appear--disable (frag)
-  "Disable visibility of fragment FRAG."
-  (let ((type (caddr frag)))
-    (cond ((equal type 'latex)
-	   (org-appear--show-latex-preview (org-appear--frag-pos frag)))
-	  (t
-	   (org-appear--hide-invisible (org-appear--frag-pos frag))))))
-
-;;; Emphasis and Links
-(defun org-appear--show-invisible (pos)
+;;; Emphasis
+(defun org-appear--show-invisible (frag)
   "Silently remove invisible property from text at POS."
-  (let ((start (nth 0 pos))
-	(end (nth 1 pos))
-	(visible-start (nth 2 pos))
-	(visible-end (nth 3 pos)))
+  (let ((start (plist-get frag 'start))
+	(end (plist-get frag 'end))
+	(visible-start (plist-get frag 'visible-start))
+	(visible-end (plist-get frag 'visible-end)))
     (catch 'passed-nil
       (if (eq start nil)
 	  (throw 'passed-nil nil)
@@ -164,12 +173,12 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	  (remove-text-properties start visible-start '(invisible nil))
 	  (remove-text-properties visible-end end '(invisible nil)))))))
 
-(defun org-appear--hide-invisible (pos)
+(defun org-appear--hide-invisible (frag)
   "Silently add invisible property to text at POS."
-  (let ((start (nth 0 pos))
-	(end (nth 1 pos))
-	(visible-start (nth 2 pos))
-	(visible-end (nth 3 pos)))
+  (let ((start (plist-get frag 'start))
+	(end (plist-get frag 'end))
+	(visible-start (plist-get frag 'visible-start))
+	(visible-end (plist-get frag 'visible-end)))
     ;; If an emphasis marker is deleted when the cursor is inside an emphasised fragment,
     ;; `org-appear--hide-markers' is called with nil as an argument
     ;; TODO: a more robust fix
@@ -180,22 +189,25 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	  (put-text-property start visible-start 'invisible t)
 	  (put-text-property visible-end end 'invisible t))))))
 
+;; Links
+
 ;;; LaTeX Fragments
-(defun org-appear--show-latex-preview (pos)
+(defun org-appear--show-latex-preview (frag)
   "Enable preview of the LaTeX fragment at POS."
 
   ;; The fragment must be disabled before `org-latex-preview', since
   ;; `org-latex-preview' only toggles, leaving no guarantee that it's enabled
   ;; afterwards.
-  (org-appear--hide-latex-preview pos)
+  (org-appear--hide-latex-preview frag)
 
   (save-excursion
-    (goto-char (car pos))
+    (goto-char (plist-get frag 'start))
     (org-latex-preview)))
 
-(defun org-appear--hide-latex-preview (pos)
+(defun org-appear--hide-latex-preview (frag)
   "Disable preview of the LaTeX fragment at POS."
-  (org-clear-latex-preview (car pos) (cadr pos)))
+  (org-clear-latex-preview (plist-get frag 'start)
+			   (plist-get frag 'end)))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
