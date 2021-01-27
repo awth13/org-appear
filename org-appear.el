@@ -122,6 +122,22 @@ Return nil if element is not supported by `org-appear-mode'."
 	elem
       nil)))
 
+(defun org-appear--enabled-p (frag)
+  "Return non-nil if fragment FRAG is enabled."
+  (not (get-text-property (org-element-property :begin frag) 'invisible)))
+
+(defun org-appear-toggle-at-point ()
+  "Toggle fragment at point."
+  (interactive)
+  (let ((current-frag (org-appear--current-frag)))
+    (pcase (car current-frag)
+      ((or 'latex-fragment 'latex-environment)
+       (org-latex-preview))
+      (type
+       (if (org-appear--enabled-p current-frag)
+	   (org-appear--disable current-frag)
+	 (org-appear--enable current-frag))))))
+
 (defun org-appear--parse-elem (elem)
   "Parse element ELEM.
 TODO: Extracted info."
@@ -180,7 +196,7 @@ TODO: Extracted info."
 
 ;;; Emphasis
 (defun org-appear--show-invisible (frag)
-  "Silently remove invisible property from text at POS."
+  "Silently remove invisible property inside fragment FRAG."
   (let ((start (plist-get frag 'start))
 	(end (plist-get frag 'end))
 	(visible-start (plist-get frag 'visible-start))
@@ -193,7 +209,7 @@ TODO: Extracted info."
 	  (remove-text-properties visible-end end '(invisible nil)))))))
 
 (defun org-appear--hide-invisible (frag)
-  "Silently add invisible property to text at POS."
+  "Silently add invisible property to inside fragment FRAG."
   (let ((start (plist-get frag 'start))
 	(end (plist-get frag 'end))
 	(visible-start (plist-get frag 'visible-start))
@@ -208,11 +224,9 @@ TODO: Extracted info."
 	  (put-text-property start visible-start 'invisible t)
 	  (put-text-property visible-end end 'invisible t))))))
 
-;; Links
-
 ;;; LaTeX Fragments
 (defun org-appear--show-latex-preview (frag)
-  "Enable preview of the LaTeX fragment at POS."
+  "Enable preview of the LaTeX fragment FRAG."
 
   ;; The fragment must be disabled before `org-latex-preview', since
   ;; `org-latex-preview' only toggles, leaving no guarantee that it's enabled
@@ -224,22 +238,9 @@ TODO: Extracted info."
     (org-latex-preview)))
 
 (defun org-appear--hide-latex-preview (frag)
-  "Disable preview of the LaTeX fragment at POS."
+  "Disable preview of the LaTeX fragment FRAG."
   (org-clear-latex-preview (plist-get frag 'start)
 			   (plist-get frag 'end)))
-
-;; TODO: Manual toggling
-;; (defcustom org-appear-manual nil
-;;   "Non-nil means that automatic toggling is disabled."
-;;   :type 'boolean
-;;   :group 'org)
-;;
-;; (defun org-appear-at-point ()
-;;   "Toggle fragment at point."
-;;   (interactive)
-;;   (let ((current-frag (org-appear--current-frag)))
-;;     (when current-frag
-;;       (org-appear--toggle current-frag))))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
