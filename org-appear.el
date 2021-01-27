@@ -154,9 +154,10 @@ TODO: Extracted info."
   (let* ((elem-type (car elem))
 	 (elem-start (org-element-property :begin elem))
 	 (elem-end (org-element-property :end elem))
+	 (elem-content-start (org-element-property :contents-begin elem))
+	 (elem-content-end (org-element-property :contents-end elem))
 	 (post-elem-spaces (org-element-property :post-blank elem))
-	 (elem-end-real (- elem-end post-elem-spaces))
-	 (elem-has-brackets (org-element-property :use-brackets-p elem)))
+	 (elem-end-real (- elem-end post-elem-spaces)))
     (cond ((member elem-type '(bold
 			       italic
 			       underline
@@ -170,17 +171,11 @@ TODO: Extracted info."
 		 'type 'emph))
 	  ((member elem-type '(subscript
 			       superscript))
-	   (if elem-has-brackets
-	       (list 'start elem-start
-		     'end elem-end-real
-		     'visible-start (+ elem-start 2)
-		     'visible-end (1- elem-end-real)
-		     'type 'subscript)
-	     (list 'start elem-start
-		   'end elem-end-real
-		   'visible-start (1+ elem-start)
-		   'visible-end elem-end-real
-		   'type 'subscript)))
+	   (list 'start elem-start
+		 'end elem-end-real
+		 'visible-start elem-content-start
+		 'visible-end elem-content-end
+		 'type 'subscript))
 	  ((member elem-type '(latex-fragment
 			       latex-environmet))
 	   (list 'start elem-start
