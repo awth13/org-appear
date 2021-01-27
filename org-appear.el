@@ -1,11 +1,11 @@
-;;; org-togglers.el --- Auto-toggle Org fragments -*- lexical-binding: t; -*-
+;;; org-appear.el --- Auto-toggle Org fragments -*- lexical-binding: t; -*-
 
 ;; Portions of code in this file are taken from org-fragtog https://github.com/io12/org-fragtog
 ;; org-fragtog Copyright (C) 2020 Benjamin Levy - MIT/X11 License
-;; org-togglers Copyright (C) 2021 Alice Istleyeva - MIT License
+;; org-appear Copyright (C) 2021 Alice Istleyeva - MIT License
 ;; Author: Alice Istleyeva <awth13@gmail.com>
-;; Description: Toggle Org mode emphasis markers upon entering and leaving an emphasised fragment
-;; Homepage: https://github.com/awth13/org-togglers
+;; Description: Toggle Org mode fragment visibility upon entering and leaving
+;; Homepage: https://github.com/awth13/org-appear
 
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
 ;; of this software and associated documentation files (the "Software"), to deal
@@ -35,59 +35,59 @@
 (require 'org-element)
 
 ;; TODO: Manual toggling
-;; (defcustom org-togglers-manual nil
+;; (defcustom org-appear-manual nil
 ;;   "Non-nil means that automatic toggling is disabled."
 ;;   :type 'boolean
 ;;   :group 'org)
 ;;
-;; (defun org-togglers-at-point ()
+;; (defun org-appear-at-point ()
 ;;   "Toggle fragment at point."
 ;;   (interactive)
-;;   (let ((current-frag (org-togglers--current-frag)))
+;;   (let ((current-frag (org-appear--current-frag)))
 ;;     (when current-frag
-;;       (org-togglers--toggle current-frag))))
+;;       (org-appear--toggle current-frag))))
 
 ;; TODO: Custom settings per-type
 
 ;;;###autoload
-(define-minor-mode org-togglers-mode
+(define-minor-mode org-appear-mode
   "A minor mode that automatically toggles fragments in Org mode.
 Markers are shown when the cursor enters an emphasised fragment and hidden when the
 cursor leaves the fragment."
   nil nil nil
 
   (cond
-   (org-togglers-mode
-    (add-hook 'post-command-hook #'org-togglers--post-cmd nil t))
+   (org-appear-mode
+    (add-hook 'post-command-hook #'org-appear--post-cmd nil t))
    (t
-    (let ((current-frag (org-togglers--current-frag)))
+    (let ((current-frag (org-appear--current-frag)))
       (when current-frag
-	(org-togglers--disable current-frag)))
-    (remove-hook 'post-command-hook #'org-togglers--post-cmd t))))
+	(org-appear--disable current-frag)))
+    (remove-hook 'post-command-hook #'org-appear--post-cmd t))))
 
-(defvar-local org-togglers--prev-frag nil
+(defvar-local org-appear--prev-frag nil
   "Previous fragment that surrounded the cursor, or nil if the cursor was not
 on a fragment. This is used to track when the cursor leaves a fragment.")
 
-(defun org-togglers--post-cmd ()
-  "This function is executed by `post-command-hook' in `org-togglers-mode'.
+(defun org-appear--post-cmd ()
+  "This function is executed by `post-command-hook' in `org-appear-mode'.
 It handles toggling fragments depending on whether the cursor entered or exited them."
-  (let* ((prev-frag org-togglers--prev-frag)
+  (let* ((prev-frag org-appear--prev-frag)
 	 (prev-frag-start (car prev-frag))
-	 (current-frag (org-togglers--current-frag))
+	 (current-frag (org-appear--current-frag))
 	 (current-frag-start (car current-frag)))
     ;; Do nothing if fragment did not change
     (when (not (equal prev-frag-start current-frag-start))
       ;; Current fragment is the new previous
-      (setq org-togglers--prev-frag current-frag)
+      (setq org-appear--prev-frag current-frag)
       ;; Hide markers in previous fragment, if any
       (when prev-frag
-	(org-togglers--disable prev-frag))
+	(org-appear--disable prev-frag))
       ;; Show markers in current fragment, if any
       (when current-frag
-	(org-togglers--enable current-frag)))))
+	(org-appear--enable current-frag)))))
 
-(defun org-togglers--current-frag ()
+(defun org-appear--current-frag ()
   "Return start position, end position, and type of a fragment if cursor is inside one."
   (let* ((elem (org-element-context))
 	 (elem-type (car elem))
@@ -108,7 +108,7 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	   (list elem-start elem-end 'link))
 	  (t nil))))
 
-(defun org-togglers--frag-pos (frag)
+(defun org-appear--frag-pos (frag)
   "Return positions of fragment FRAG."
   (let ((start (car frag))
 	(end (cadr frag))
@@ -134,24 +134,24 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 		      (visible-end (1- end)))
 		 (list start end visible-start visible-end))))))))
 
-(defun org-togglers--enable (frag)
+(defun org-appear--enable (frag)
   "Enable visibility of fragment FRAG."
   (let ((type (caddr frag)))
     (cond ((equal type 'latex)
-	   (org-togglers--hide-latex-preview (org-togglers--frag-pos frag)))
+	   (org-appear--hide-latex-preview (org-appear--frag-pos frag)))
 	  (t
-	   (org-togglers--show-invisible (org-togglers--frag-pos frag))))))
+	   (org-appear--show-invisible (org-appear--frag-pos frag))))))
 
-(defun org-togglers--disable (frag)
+(defun org-appear--disable (frag)
   "Disable visibility of fragment FRAG."
   (let ((type (caddr frag)))
     (cond ((equal type 'latex)
-	   (org-togglers--show-latex-preview (org-togglers--frag-pos frag)))
+	   (org-appear--show-latex-preview (org-appear--frag-pos frag)))
 	  (t
-	   (org-togglers--hide-invisible (org-togglers--frag-pos frag))))))
+	   (org-appear--hide-invisible (org-appear--frag-pos frag))))))
 
 ;;; Emphasis and Links
-(defun org-togglers--show-invisible (pos)
+(defun org-appear--show-invisible (pos)
   "Silently remove invisible property from text at POS."
   (let ((start (nth 0 pos))
 	(end (nth 1 pos))
@@ -164,14 +164,14 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	  (remove-text-properties start visible-start '(invisible nil))
 	  (remove-text-properties visible-end end '(invisible nil)))))))
 
-(defun org-togglers--hide-invisible (pos)
+(defun org-appear--hide-invisible (pos)
   "Silently add invisible property to text at POS."
   (let ((start (nth 0 pos))
 	(end (nth 1 pos))
 	(visible-start (nth 2 pos))
 	(visible-end (nth 3 pos)))
     ;; If an emphasis marker is deleted when the cursor is inside an emphasised fragment,
-    ;; `org-togglers--hide-markers' is called with nil as an argument
+    ;; `org-appear--hide-markers' is called with nil as an argument
     ;; TODO: a more robust fix
     (catch 'passed-nil
       (if (eq start nil)
@@ -181,21 +181,21 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	  (put-text-property visible-end end 'invisible t))))))
 
 ;;; LaTeX Fragments
-(defun org-togglers--show-latex-preview (pos)
+(defun org-appear--show-latex-preview (pos)
   "Enable preview of the LaTeX fragment at POS."
 
   ;; The fragment must be disabled before `org-latex-preview', since
   ;; `org-latex-preview' only toggles, leaving no guarantee that it's enabled
   ;; afterwards.
-  (org-togglers--hide-latex-preview pos)
+  (org-appear--hide-latex-preview pos)
 
   (save-excursion
     (goto-char (car pos))
     (org-latex-preview)))
 
-(defun org-togglers--hide-latex-preview (pos)
+(defun org-appear--hide-latex-preview (pos)
   "Disable preview of the LaTeX fragment at POS."
   (org-clear-latex-preview (car pos) (cadr pos)))
 
-(provide 'org-togglers)
-;;; org-togglers.el ends here
+(provide 'org-appear)
+;;; org-appear.el ends here
