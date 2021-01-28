@@ -101,22 +101,19 @@ on a fragment. This is used to track when the cursor leaves a fragment.")
 It handles toggling fragments depending on whether the cursor entered or exited them."
   (let* ((prev-frag org-appear--prev-frag)
 	 (prev-frag-start (org-element-property :begin prev-frag))
+	 (prev-frag-end (org-element-property :end prev-frag))
 	 (current-frag (org-appear--current-frag))
 	 (current-frag-start (org-element-property :begin current-frag)))
-    ;; Do nothing if fragment did not change
+    (if current-frag
+	(setq-local inhibit-modification-hooks t)
+      (setq-local inhibit-modification-hooks nil)
+      (font-lock-flush prev-frag-start prev-frag-end))
     (when (not (equal prev-frag-start current-frag-start))
-      ;; Current fragment is the new previous
       (setq org-appear--prev-frag current-frag)
-      ;; Hide markers in previous fragment, if any
-      ;; `org-element-context' is re-evaluated at this point
-      ;; to get an up-to-date element
       (when prev-frag
 	(save-excursion
 	  (goto-char prev-frag-start)
 	  (org-appear--disable (org-element-context))))
-      ;; Show markers in current fragment, if any
-      ;; `org-element-context' is re-evaluated at this point
-      ;; to get an up-to-date element
       (when current-frag
 	(save-excursion
 	  (goto-char current-frag-start)
@@ -185,7 +182,7 @@ TODO: Extracted info."
 	  (t nil))))
 
 (defun org-appear--enable (elem)
-  "Enable visibility of element ELEM."
+  "Enable visibility of invisible parts of element ELEM."
   (let ((frag-props (org-appear--parse-elem elem)))
     (pcase (plist-get frag-props 'type)
       ('latex
@@ -194,7 +191,7 @@ TODO: Extracted info."
        (org-appear--show-invisible frag-props)))))
 
 (defun org-appear--disable (elem)
-  "Disable visibility of element ELEM."
+  "Disable visibility of invisible parts of element ELEM."
   (let ((frag-props (org-appear--parse-elem elem)))
     (pcase (plist-get frag-props 'type)
       ('latex
@@ -202,28 +199,26 @@ TODO: Extracted info."
       ((or 'emph 'link)
        (org-appear--hide-invisible frag-props)))))
 
-;;; Emphasis
 (defun org-appear--show-invisible (frag)
-  "Silently remove invisible property inside fragment FRAG."
+  "Silently remove invisible property from invisible elements inside fragment FRAG."
   (let ((start (plist-get frag 'start))
 	(end (plist-get frag 'end))
 	(visible-start (plist-get frag 'visible-start))
 	(visible-end (plist-get frag 'visible-end)))
     (with-silent-modifications
-      (remove-text-properties start visible-start '(invisible nil))
-      (remove-text-properties visible-end end '(invisible nil)))))
+      (remove-text-properties start visible-start '(invisible org-link))
+      (remove-text-properties visible-end end '(invisible org-link)))))
 
 (defun org-appear--hide-invisible (frag)
-  "Silently add invisible property to inside fragment FRAG."
+  "Silently add invisible property to invisible elements inside fragment FRAG."
   (let ((start (plist-get frag 'start))
 	(end (plist-get frag 'end))
 	(visible-start (plist-get frag 'visible-start))
 	(visible-end (plist-get frag 'visible-end)))
     (with-silent-modifications
-      (put-text-property start visible-start 'invisible t)
-      (put-text-property visible-end end 'invisible t))))
+      (put-text-property start visible-start 'invisible 'org-link)
+      (put-text-property visible-end end 'invisible 'org-link))))
 
-;;; LaTeX Fragments
 (defun org-appear--show-latex-preview (frag)
   "Enable preview of the LaTeX fragment FRAG."
 
