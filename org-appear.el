@@ -115,8 +115,12 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	  (goto-char prev-frag-start)
 	  (org-appear--disable (org-element-context))))
       ;; Show markers in current fragment, if any
+      ;; `org-element-context' is re-evaluated at this point
+      ;; to get an up-to-date element
       (when current-frag
-	(org-appear--enable current-frag)))))
+	(save-excursion
+	  (goto-char current-frag-start)
+	  (org-appear--enable (org-element-context)))))))
 
 (defun org-appear--current-frag ()
   "Return element list of fragment at point.
@@ -205,12 +209,9 @@ TODO: Extracted info."
 	(end (plist-get frag 'end))
 	(visible-start (plist-get frag 'visible-start))
 	(visible-end (plist-get frag 'visible-end)))
-    (catch 'passed-nil
-      (if (eq start nil)
-	  (throw 'passed-nil nil)
-	(with-silent-modifications
-	  (remove-text-properties start visible-start '(invisible nil))
-	  (remove-text-properties visible-end end '(invisible nil)))))))
+    (with-silent-modifications
+      (remove-text-properties start visible-start '(invisible nil))
+      (remove-text-properties visible-end end '(invisible nil)))))
 
 (defun org-appear--hide-invisible (frag)
   "Silently add invisible property to inside fragment FRAG."
@@ -218,15 +219,9 @@ TODO: Extracted info."
 	(end (plist-get frag 'end))
 	(visible-start (plist-get frag 'visible-start))
 	(visible-end (plist-get frag 'visible-end)))
-    ;; If an emphasis marker is deleted when the cursor is inside an emphasised fragment,
-    ;; `org-appear--hide-markers' is called with nil as an argument
-    ;; TODO: a more robust fix
-    (catch 'passed-nil
-      (if (eq start nil)
-	  (throw 'passed-nil nil)
-	(with-silent-modifications
-	  (put-text-property start visible-start 'invisible t)
-	  (put-text-property visible-end end 'invisible t))))))
+    (with-silent-modifications
+      (put-text-property start visible-start 'invisible t)
+      (put-text-property visible-end end 'invisible t))))
 
 ;;; LaTeX Fragments
 (defun org-appear--show-latex-preview (frag)
