@@ -182,17 +182,15 @@ TODO: Extracted info."
 		 'end elem-end-real
 		 'type 'latex))
 	  ((equal elem-type 'link)
-	   (let ((visible-start (org-element-property :contents-begin elem))
-		 (visible-end (org-element-property :contents-end elem)))
 	     (list 'start elem-start
 		   'end elem-end-real
-		   'visible-start (if visible-start
-				      visible-start
+		   'visible-start (if elem-content-start
+				      elem-content-start
 				    (+ elem-start 2))
-		   'visible-end (if visible-end
-				    visible-end
+		   'visible-end (if elem-content-end
+				    elem-content-end
 				  (- elem-end-real 2))
-		   'type 'link)))
+		   'type 'link))
 	  (t nil))))
 
 (defun org-appear--enable (elem)
