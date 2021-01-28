@@ -44,6 +44,12 @@ Does not have an effect if `org-hide-emphasis-markers' is nil."
   :type 'boolean
   :group 'org-appear)
 
+(defcustom org-appear-autosubmarkers nil
+  "Non-nil enables automatic toggling of subscript and superscript markers.
+Does not have an effect if `org-pretty-entities' is nil."
+  :type 'boolean
+  :group 'org-appear)
+
 (defcustom org-appear-autolinks nil
   "Non-nil enables automatic toggling of links.
 Does not have an effect if `org-link-descriptive' is nil."
@@ -81,12 +87,16 @@ Does not have an effect if `org-link-descriptive' is nil."
 			  strike-through
 			  verbatim
 			  code))
+	(subscript-fragments '(subscript
+			       superscript))
 	(latex-fragments '(latex-fragment
 			   latex-environment))
 	(link-fragments '(link)))
     (setq org-appear-fragments nil)
     (when (and org-hide-emphasis-markers org-appear-autoemphasis)
       (setq org-appear-fragments (append org-appear-fragments emph-fragments)))
+    (when (and org-pretty-entities org-appear-autosubmarkers)
+      (setq org-appear-fragments (append org-appear-fragments subscript-fragments)))
     (when org-appear-autolatex
       (setq org-appear-fragments (append org-appear-fragments latex-fragments)))
     (when (and org-link-descriptive org-appear-autolinks)
@@ -149,6 +159,8 @@ TODO: Extracted info."
   (let* ((elem-type (car elem))
 	 (elem-start (org-element-property :begin elem))
 	 (elem-end (org-element-property :end elem))
+	 (elem-content-start (org-element-property :contents-begin elem))
+	 (elem-content-end (org-element-property :contents-end elem))
 	 (post-elem-spaces (org-element-property :post-blank elem))
 	 (elem-end-real (- elem-end post-elem-spaces)))
     (cond ((member elem-type '(bold
@@ -162,23 +174,28 @@ TODO: Extracted info."
 		 'visible-start (1+ elem-start)
 		 'visible-end (1- elem-end-real)
 		 'type 'emph))
+	  ((member elem-type '(subscript
+			       superscript))
+	   (list 'start elem-start
+		 'end elem-end-real
+		 'visible-start elem-content-start
+		 'visible-end elem-content-end
+		 'type 'subscript))
 	  ((member elem-type '(latex-fragment
 			       latex-environmet))
 	   (list 'start elem-start
 		 'end elem-end-real
 		 'type 'latex))
 	  ((equal elem-type 'link)
-	   (let ((visible-start (org-element-property :contents-begin elem))
-		 (visible-end (org-element-property :contents-end elem)))
 	     (list 'start elem-start
 		   'end elem-end-real
-		   'visible-start (if visible-start
-				      visible-start
+		   'visible-start (if elem-content-start
+				      elem-content-start
 				    (+ elem-start 2))
-		   'visible-end (if visible-end
-				    visible-end
+		   'visible-end (if elem-content-end
+				    elem-content-end
 				  (- elem-end-real 2))
-		   'type 'link)))
+		   'type 'link))
 	  (t nil))))
 
 (defun org-appear--enable (elem)
@@ -187,7 +204,7 @@ TODO: Extracted info."
     (pcase (plist-get frag-props 'type)
       ('latex
        (org-appear--hide-latex-preview frag-props))
-      ((or 'emph 'link)
+      ((or 'emph 'link 'subscript)
        (org-appear--show-invisible frag-props)))))
 
 (defun org-appear--disable (elem)
@@ -196,7 +213,7 @@ TODO: Extracted info."
     (pcase (plist-get frag-props 'type)
       ('latex
        (org-appear--show-latex-preview frag-props))
-      ((or 'emph 'link)
+      ((or 'emph 'link 'subscript)
        (org-appear--hide-invisible frag-props)))))
 
 (defun org-appear--show-invisible (frag)
