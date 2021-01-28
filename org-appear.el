@@ -108,8 +108,12 @@ It handles toggling fragments depending on whether the cursor entered or exited 
       ;; Current fragment is the new previous
       (setq org-appear--prev-frag current-frag)
       ;; Hide markers in previous fragment, if any
+      ;; `org-element-context' is re-evaluated at this point
+      ;; to get an up-to-date element
       (when prev-frag
-	(org-appear--disable prev-frag))
+	(save-excursion
+	  (goto-char prev-frag-start)
+	  (org-appear--disable (org-element-context))))
       ;; Show markers in current fragment, if any
       (when current-frag
 	(org-appear--enable current-frag)))))
