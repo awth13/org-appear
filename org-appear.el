@@ -57,7 +57,8 @@ Does not have an effect if `org-link-descriptive' is nil."
   :group 'org-appear)
 
 (defcustom org-appear-autolatex nil
-  "Non-nil enables automatic toggling of LaTeX fragments."
+  "Non-nil enables automatic toggling of LaTeX fragments.
+Does not have an effect if `org-startup-with-latex-preview' is nil."
   :type 'boolean
   :group 'org-appear)
 
@@ -69,6 +70,7 @@ Does not have an effect if `org-link-descriptive' is nil."
   (cond
    (org-appear-mode
     (org-appear--set-fragments)
+    (setq-local org-appear--default-managed-props font-lock-extra-managed-props)
     (add-hook 'post-command-hook #'org-appear--post-cmd nil t))
    (t
     (let ((current-frag (org-appear--current-frag)))
@@ -97,7 +99,7 @@ Does not have an effect if `org-link-descriptive' is nil."
       (setq org-appear-fragments (append org-appear-fragments emph-fragments)))
     (when (and org-pretty-entities org-appear-autosubmarkers)
       (setq org-appear-fragments (append org-appear-fragments subscript-fragments)))
-    (when org-appear-autolatex
+    (when (and org-appear-autolatex org-startup-with-latex-preview)
       (setq org-appear-fragments (append org-appear-fragments latex-fragments)))
     (when (and org-link-descriptive org-appear-autolinks)
       (setq org-appear-fragments (append org-appear-fragments link-fragments)))))
@@ -106,19 +108,25 @@ Does not have an effect if `org-link-descriptive' is nil."
   "Previous fragment that surrounded the cursor, or nil if the cursor was not
 on a fragment. This is used to track when the cursor leaves a fragment.")
 
+(defvar-local org-appear--default-managed-props nil
+  "Value of `font-lock-extra-managed-props' before `org-appear' was enabled.
+Used for non-destructive toggling of `font-lock-extra-managed-props'.")
+
 (defun org-appear--post-cmd ()
   "This function is executed by `post-command-hook' in `org-appear-mode'.
 It handles toggling fragments depending on whether the cursor entered or exited them."
   (let* ((prev-frag org-appear--prev-frag)
 	 (prev-frag-start (org-element-property :begin prev-frag))
-	 (prev-frag-end (org-element-property :end prev-frag))
 	 (current-frag (org-appear--current-frag))
 	 (current-frag-start (org-element-property :begin current-frag)))
-    (if current-frag
-	(setq-local inhibit-modification-hooks t)
-      (setq-local inhibit-modification-hooks nil)
-      (font-lock-flush prev-frag-start prev-frag-end))
     (when (not (equal prev-frag-start current-frag-start))
+      ;; If both current and previous fragments are active
+      ;; keep preventing font-lock from hiding invisible parts
+      ;; Don't toggle on LaTeX fragments as well
+      (unless (or (and prev-frag current-frag)
+		  (member (car current-frag) '(latex-fragment
+					       latex-environment)))
+	(org-appear--toggle-managed-props prev-frag))
       (setq org-appear--prev-frag current-frag)
       (when prev-frag
 	(save-excursion
@@ -137,21 +145,22 @@ Return nil if element is not supported by `org-appear-mode'."
 	elem
       nil)))
 
-(defun org-appear--enabled-p (frag)
-  "Return non-nil if fragment FRAG is enabled."
-  (not (get-text-property (org-element-property :begin frag) 'invisible)))
+;; TODO: fix this with editing fragments in mind
+;; (defun org-appear--enabled-p (frag)
+;;   "Return non-nil if fragment FRAG is enabled."
+;;   (not (get-text-property (org-element-property :begin frag) 'invisible)))
 
-(defun org-appear-toggle-at-point ()
-  "Toggle fragment at point."
-  (interactive)
-  (let ((current-frag (org-appear--current-frag)))
-    (pcase (car current-frag)
-      ((or 'latex-fragment 'latex-environment)
-       (org-latex-preview))
-      (type
-       (if (org-appear--enabled-p current-frag)
-	   (org-appear--disable current-frag)
-	 (org-appear--enable current-frag))))))
+;; (defun org-appear-toggle-at-point ()
+;;   "Toggle fragment at point."
+;;   (interactive)
+;;   (let ((current-frag (org-appear--current-frag)))
+;;     (pcase (car current-frag)
+;;       ((or 'latex-fragment 'latex-environment)
+;;        (org-latex-preview))
+;;       (type
+;;        (if (org-appear--enabled-p current-frag)
+;; 	   (org-appear--disable current-frag)
+;; 	 (org-appear--enable current-frag))))))
 
 (defun org-appear--parse-elem (elem)
   "Parse element ELEM.
@@ -187,15 +196,15 @@ TODO: Extracted info."
 		 'end elem-end-real
 		 'type 'latex))
 	  ((equal elem-type 'link)
-	     (list 'start elem-start
-		   'end elem-end-real
-		   'visible-start (if elem-content-start
-				      elem-content-start
-				    (+ elem-start 2))
-		   'visible-end (if elem-content-end
-				    elem-content-end
-				  (- elem-end-real 2))
-		   'type 'link))
+	   (list 'start elem-start
+		 'end elem-end-real
+		 'visible-start (if elem-content-start
+				    elem-content-start
+				  (+ elem-start 2))
+		 'visible-end (if elem-content-end
+				  elem-content-end
+				(- elem-end-real 2))
+		 'type 'link))
 	  (t nil))))
 
 (defun org-appear--enable (elem)
@@ -215,6 +224,16 @@ TODO: Extracted info."
        (org-appear--show-latex-preview frag-props))
       ((or 'emph 'link 'subscript)
        (org-appear--hide-invisible frag-props)))))
+
+(defun org-appear--toggle-managed-props (frag)
+  "Add invisibile property to `font-lock-extra-managed-props' if it was not managed.
+Revert to default value if it was, flushing previous fragment FRAG."
+  (if (equal font-lock-extra-managed-props org-appear--default-managed-props)
+      (setq-local font-lock-extra-managed-props 'invisible)
+    (setq-local font-lock-extra-managed-props org-appear--default-managed-props)
+    (when frag
+      (font-lock-flush (org-element-property :begin frag)
+		       (org-element-property :end frag)))))
 
 (defun org-appear--show-invisible (frag)
   "Silently remove invisible property from invisible elements inside fragment FRAG."
