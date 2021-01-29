@@ -1,16 +1,16 @@
-* ~org-emphtog~
+* ~org-appear~
 
-Automatically toggle visibility of emphasis and verbatim markers upon entering and leaving an emphasised fragment.
+Make invisible parts of Org fragments appear visible. 
 
 ** About
 
-[[https://orgmode.org/][Org mode]] provides a way to toggle visibility of emphasis markers with ~org-hide-emphasis-markers~. However, it is currently not possible to do this interactively -- users have to reload Org buffers for the setting to take effect. This package, heavily inspired by [[https://github.com/io12/org-fragtog][org-fragtog]], enables automatic visibility toggling depending on the cursor position. Emphasis (verbatim) markers are shown when the cursor enters an emphasised (verbatim) fragment and hidden when the cursor leaves.
+[[https://orgmode.org/][Org mode]] provides a way to toggle visibility of emphasis markers, links, subscripts, and superscripts by customising variables such as ~org-hide-emphasis-markers~. However, it is currently not possible to do this interactively and on a fragment-by-fragment basis. Emphasis and verbatim marker toggling requires reloading the Org buffer; links and sub/superscripts are always toggled in the entire buffer. This package, inspired by [[https://github.com/io12/org-fragtog][org-fragtog]], enables automatic visibility toggling depending on cursor position. Hidden fragment parts appear when the cursor enters a fragment and disappear when it leaves.
 
 [[file:demo.gif]]
 
 ** Installation
 
-Download =org-emphtog.el= and point Emacs to it.
+Git clone this repository and point Emacs to it.
 
 With ~use-package~:
 
@@ -39,6 +39,4 @@ The package can be enabled interactively or automatically on org-mode start-up:
 
 #+end_src
 
-*Note:* if ~org-hide-emphasis-markers~ is set to nil, enabling ~org-emphtog-mode~ does nothing.
-
-Automatic toggling may be disabled by setting the ~org-emphtog-manual~ custom variable to non-nil. In this case, ~org-emphtog-at-point~ may be used to manually toggle emphasis markers around the cursor.
+Automatic toggling of fragments may be enabled by setting ~org-appear-autoemphasis~, ~org-appear-autolinks~, and ~org-appear-autosubmarkers~ custom variables to non-nil. By default, only ~org-appear-autoemphasis~ is enabled. If Org mode custom variables that control visibility of emphasis markers, links, or sub/superscripts are configured to show hidden parts, the respective ~org-appear~ settings do not have an effect.
