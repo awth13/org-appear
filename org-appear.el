@@ -56,12 +56,6 @@ Does not have an effect if `org-link-descriptive' is nil."
   :type 'boolean
   :group 'org-appear)
 
-(defcustom org-appear-autolatex nil
-  "Non-nil enables automatic toggling of LaTeX fragments.
-Does not have an effect if `org-startup-with-latex-preview' is nil."
-  :type 'boolean
-  :group 'org-appear)
-
 ;;;###autoload
 (define-minor-mode org-appear-mode
   "A minor mode that automatically toggles fragments in Org mode."
@@ -90,16 +84,12 @@ Does not have an effect if `org-startup-with-latex-preview' is nil."
 			  code))
 	(subscript-fragments '(subscript
 			       superscript))
-	(latex-fragments '(latex-fragment
-			   latex-environment))
 	(link-fragments '(link)))
     (setq org-appear-fragments nil)
     (when (and org-hide-emphasis-markers org-appear-autoemphasis)
       (setq org-appear-fragments (append org-appear-fragments emph-fragments)))
     (when (and org-pretty-entities org-appear-autosubmarkers)
       (setq org-appear-fragments (append org-appear-fragments subscript-fragments)))
-    (when (and org-appear-autolatex org-startup-with-latex-preview)
-      (setq org-appear-fragments (append org-appear-fragments latex-fragments)))
     (when (and org-link-descriptive org-appear-autolinks)
       (setq org-appear-fragments (append org-appear-fragments link-fragments)))))
 
@@ -122,11 +112,11 @@ It handles toggling fragments depending on whether the cursor entered or exited 
       (when prev-frag
 	(save-excursion
 	  (goto-char prev-frag-start)
-	  (org-appear--disable (org-element-context))))
+	  (org-appear--hide-invisible (org-element-context))))
       (when current-frag
 	(save-excursion
 	  (goto-char current-frag-start)
-	  (org-appear--enable (org-element-context)))))))
+	  (org-appear--show-invisible (org-element-context)))))))
 
 (defun org-appear--current-frag ()
   "Return element list of fragment at point.
@@ -135,25 +125,6 @@ Return nil if element is not supported by `org-appear-mode'."
     (if (member (car elem) org-appear-fragments)
 	elem
       nil)))
-
-;; REMOVED: Not a good idea to disable jit-lock-mode for the entire buffer
-;; when toggling just one fragment
-;;
-;; (defun org-appear--enabled-p (frag)
-;;   "Return non-nil if fragment FRAG is enabled."
-;;   (not (get-text-property (org-element-property :begin frag) 'invisible)))
-;;
-;; (defun org-appear-toggle-at-point ()
-;;   "Toggle fragment at point."
-;;   (interactive)
-;;   (let ((current-frag (org-appear--current-frag)))
-;;     (pcase (car current-frag)
-;;       ((or 'latex-fragment 'latex-environment)
-;;        (org-latex-preview))
-;;       (type
-;;        (if (org-appear--enabled-p current-frag)
-;; 	   (org-appear--disable current-frag)
-;; 	 (org-appear--enable current-frag))))))
 
 (defun org-appear--parse-elem (elem)
   "Parse element ELEM.
@@ -183,11 +154,6 @@ TODO: Extracted info."
 		 'visible-start elem-content-start
 		 'visible-end elem-content-end
 		 'type 'subscript))
-	  ((member elem-type '(latex-fragment
-			       latex-environmet))
-	   (list 'start elem-start
-		 'end elem-end-real
-		 'type 'latex))
 	  ((equal elem-type 'link)
 	   (list 'start elem-start
 		 'end elem-end-real
@@ -199,24 +165,6 @@ TODO: Extracted info."
 				(- elem-end-real 2))
 		 'type 'link))
 	  (t nil))))
-
-(defun org-appear--enable (elem)
-  "Enable visibility of invisible parts of element ELEM."
-  (let ((frag-props (org-appear--parse-elem elem)))
-    (pcase (plist-get frag-props 'type)
-      ('latex
-       (org-appear--hide-latex-preview frag-props))
-      ((or 'emph 'link 'subscript)
-       (org-appear--show-invisible frag-props)))))
-
-(defun org-appear--disable (elem)
-  "Disable visibility of invisible parts of element ELEM."
-  (let ((frag-props (org-appear--parse-elem elem)))
-    (pcase (plist-get frag-props 'type)
-      ('latex
-       (org-appear--show-latex-preview frag-props))
-      ((or 'emph 'link 'subscript)
-       (org-appear--hide-invisible frag-props)))))
 
 (defun org-appear--toggle-lock-and-flush (frag)
   "Disable `jit-lock-mode' if it was enabled.
@@ -230,40 +178,25 @@ Enable it otherwise, flushing previous fragment FRAG."
 
 (defun org-appear--show-invisible (frag)
   "Silently remove invisible property from invisible elements inside fragment FRAG."
-  (let ((start (plist-get frag 'start))
-	(end (plist-get frag 'end))
-	(visible-start (plist-get frag 'visible-start))
-	(visible-end (plist-get frag 'visible-end)))
+  (let* ((frag-props (org-appear--parse-elem frag))
+	 (start (plist-get frag-props 'start))
+	 (end (plist-get frag-props 'end))
+	 (visible-start (plist-get frag-props 'visible-start))
+	 (visible-end (plist-get frag-props 'visible-end)))
     (with-silent-modifications
       (remove-text-properties start visible-start '(invisible org-link))
       (remove-text-properties visible-end end '(invisible org-link)))))
 
 (defun org-appear--hide-invisible (frag)
   "Silently add invisible property to invisible elements inside fragment FRAG."
-  (let ((start (plist-get frag 'start))
-	(end (plist-get frag 'end))
-	(visible-start (plist-get frag 'visible-start))
-	(visible-end (plist-get frag 'visible-end)))
+  (let* ((frag-props (org-appear--parse-elem frag))
+	 (start (plist-get frag-props 'start))
+	 (end (plist-get frag-props 'end))
+	 (visible-start (plist-get frag-props 'visible-start))
+	 (visible-end (plist-get frag-props 'visible-end)))
     (with-silent-modifications
       (put-text-property start visible-start 'invisible 'org-link)
       (put-text-property visible-end end 'invisible 'org-link))))
-
-(defun org-appear--show-latex-preview (frag)
-  "Enable preview of the LaTeX fragment FRAG."
-
-  ;; The fragment must be disabled before `org-latex-preview', since
-  ;; `org-latex-preview' only toggles, leaving no guarantee that it's enabled
-  ;; afterwards.
-  (org-appear--hide-latex-preview frag)
-
-  (save-excursion
-    (goto-char (plist-get frag 'start))
-    (org-latex-preview)))
-
-(defun org-appear--hide-latex-preview (frag)
-  "Disable preview of the LaTeX fragment FRAG."
-  (org-clear-latex-preview (plist-get frag 'start)
-			   (plist-get frag 'end)))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
