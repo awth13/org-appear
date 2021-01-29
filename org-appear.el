@@ -70,12 +70,11 @@ Does not have an effect if `org-startup-with-latex-preview' is nil."
   (cond
    (org-appear-mode
     (org-appear--set-fragments)
-    (setq-local org-appear--default-managed-props font-lock-extra-managed-props)
     (add-hook 'post-command-hook #'org-appear--post-cmd nil t))
    (t
     (let ((current-frag (org-appear--current-frag)))
       (when current-frag
-	(org-appear--disable current-frag)))
+	(org-appear--toggle-lock-and-flush current-frag)))
     (remove-hook 'post-command-hook #'org-appear--post-cmd t))))
 
 (defvar org-appear-fragments nil
@@ -108,10 +107,6 @@ Does not have an effect if `org-startup-with-latex-preview' is nil."
   "Previous fragment that surrounded the cursor, or nil if the cursor was not
 on a fragment. This is used to track when the cursor leaves a fragment.")
 
-(defvar-local org-appear--default-managed-props nil
-  "Value of `font-lock-extra-managed-props' before `org-appear' was enabled.
-Used for non-destructive toggling of `font-lock-extra-managed-props'.")
-
 (defun org-appear--post-cmd ()
   "This function is executed by `post-command-hook' in `org-appear-mode'.
 It handles toggling fragments depending on whether the cursor entered or exited them."
@@ -120,13 +115,9 @@ It handles toggling fragments depending on whether the cursor entered or exited 
 	 (current-frag (org-appear--current-frag))
 	 (current-frag-start (org-element-property :begin current-frag)))
     (when (not (equal prev-frag-start current-frag-start))
-      ;; If both current and previous fragments are active
-      ;; keep preventing font-lock from hiding invisible parts
-      ;; Don't toggle on LaTeX fragments as well
-      (unless (or (and prev-frag current-frag)
-		  (member (car current-frag) '(latex-fragment
-					       latex-environment)))
-	(org-appear--toggle-managed-props prev-frag))
+      ;; Unless we are still in an active fragment
+      (unless (and prev-frag current-frag)
+	(org-appear--toggle-lock-and-flush prev-frag))
       (setq org-appear--prev-frag current-frag)
       (when prev-frag
 	(save-excursion
@@ -145,11 +136,13 @@ Return nil if element is not supported by `org-appear-mode'."
 	elem
       nil)))
 
-;; TODO: fix this with editing fragments in mind
+;; REMOVED: Not a good idea to disable jit-lock-mode for the entire buffer
+;; when toggling just one fragment
+;;
 ;; (defun org-appear--enabled-p (frag)
 ;;   "Return non-nil if fragment FRAG is enabled."
 ;;   (not (get-text-property (org-element-property :begin frag) 'invisible)))
-
+;;
 ;; (defun org-appear-toggle-at-point ()
 ;;   "Toggle fragment at point."
 ;;   (interactive)
@@ -225,12 +218,12 @@ TODO: Extracted info."
       ((or 'emph 'link 'subscript)
        (org-appear--hide-invisible frag-props)))))
 
-(defun org-appear--toggle-managed-props (frag)
-  "Add invisibile property to `font-lock-extra-managed-props' if it was not managed.
-Revert to default value if it was, flushing previous fragment FRAG."
-  (if (equal font-lock-extra-managed-props org-appear--default-managed-props)
-      (setq-local font-lock-extra-managed-props 'invisible)
-    (setq-local font-lock-extra-managed-props org-appear--default-managed-props)
+(defun org-appear--toggle-lock-and-flush (frag)
+  "Disable `jit-lock-mode' if it was enabled.
+Enable it otherwise, flushing previous fragment FRAG."
+  (if jit-lock-mode
+      (setq-local jit-lock-mode nil)
+    (setq-local jit-lock-mode t)
     (when frag
       (font-lock-flush (org-element-property :begin frag)
 		       (org-element-property :end frag)))))
