@@ -1,10 +1,6 @@
 * ~org-appear~
 
-<<<<<<< HEAD
 Make invisible parts of Org fragments appear visible.
-=======
-Make invisible parts of Org fragments appear visible. 
->>>>>>> origin/feature/org-togglers
 
 ** About
 
