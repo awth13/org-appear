@@ -94,6 +94,7 @@ Does not have an effect if `org-link-descriptive' is nil."
 	(link-fragments '(link)))
 
     ;; TODO: is there a better way to do this?
+    (setq-local org-appear--prev-frag nil)
     (setq org-appear-fragments nil)	; reset
     (when (and org-hide-emphasis-markers org-appear-autoemphasis)
       (setq org-appear-fragments (append org-appear-fragments emph-fragments)))
