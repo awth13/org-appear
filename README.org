@@ -10,7 +10,15 @@ Make invisible parts of Org fragments appear visible.
 
 ** Installation
 
-Git clone this repository and point Emacs to it.
+With [[https://github.com/raxod502/straight.el][straight.el]], just put the following line in the ~init.el~:
+
+#+begin_src emacs-lisp
+
+  (straight-use-package '(org-appear :type git :host github :repo "awth13/org-appear"))
+
+#+end_src
+
+Alternatively, git clone this repository and point Emacs to it.
 
 With ~use-package~:
 
@@ -21,7 +29,7 @@ With ~use-package~:
 
 #+end_src
 
-Alternatively, using ~require~:
+With ~require~:
 
 #+begin_src emacs-lisp
 
