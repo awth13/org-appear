@@ -147,6 +147,7 @@ Return nil if element is not supported by `org-appear-mode'."
   "Return start, end, visible start, and visible end positions of element ELEM.
 If ELEM is not recognised by the package, return nil."
   (let* ((elem-type (car elem))
+	 (link-subtype (org-element-property :type elem))
 	 (elem-tag (cond ((memq elem-type '(bold
 					    italic
 					    underline
@@ -157,7 +158,9 @@ If ELEM is not recognised by the package, return nil."
 			 ((memq elem-type '(subscript
 					    superscript))
 			  'script)
-			 ((eq elem-type 'link)
+			 ;; Nothing to hide in cite links
+			 ((and (not (string= link-subtype "cite"))
+			       (eq elem-type 'link))
 			  'link)
 			 (t nil))))
     (when elem-tag			; Exit immediately if not valid ELEM
@@ -182,7 +185,6 @@ If ELEM is not recognised by the package, return nil."
 			     ('emph (1- elem-end-real))
 			     ('script elem-content-end)
 			     ('link (or elem-content-end (- elem-end-real 2)))))))))
-	      ;; 'type elem-tag)))))
 
 (defun org-appear--toggle-lock-and-flush (frag)
   "Disable `jit-lock-mode' if it was enabled.
