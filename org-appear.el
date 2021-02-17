@@ -1,10 +1,11 @@
-;;; org-appear.el --- Auto-toggle Org fragments -*- lexical-binding: t; -*-
+;;; org-appear.el --- Auto-toggle Org elements -*- lexical-binding: t; -*-
 
 ;; Portions of code in this file are taken from org-fragtog https://github.com/io12/org-fragtog
 ;; org-fragtog Copyright (C) 2020 Benjamin Levy - MIT/X11 License
 ;; org-appear Copyright (C) 2021 Alice Istleyeva - MIT License
 ;; Author: Alice Istleyeva <awth13@gmail.com>
-;; Description: Toggle Org mode fragment visibility upon entering and leaving
+;; Version: 0.0.1
+;; Description: Toggle Org mode element visibility upon entering and leaving
 ;; Homepage: https://github.com/awth13/org-appear
 
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,8 +28,8 @@
 
 ;;; Commentary:
 
-;; This package enabes automatic visibility toggling of various Org fragments depending on cursor position.
-;; Automatic toggling of fragments may be enabled by setting `org-appear-autoemphasis',
+;; This package enables automatic visibility toggling of various Org elements depending on cursor position.
+;; Automatic toggling of elements may be enabled by setting `org-appear-autoemphasis',
 ;; `org-appear-autolinks', and `org-appear-autosubmarkers' custom variables to non-nil.
 ;; By default, only `org-appear-autoemphasis' is enabled.
 ;; If Org mode custom variables that control visibility of emphasis markers, links,
@@ -41,11 +42,11 @@
 (require 'org-element)
 
 (defgroup org-appear nil
-  "Auto-toggle Org fragments"
+  "Auto-toggle Org elements"
   :group 'org)
 
 (defcustom org-appear-autoemphasis t
-  "Non-nil enables automatic toggling of emphasised and verbatim fragments.
+  "Non-nil enables automatic toggling of emphasised and verbatim markers.
 Does not have an effect if `org-hide-emphasis-markers' is nil."
   :type 'boolean
   :group 'org-appear)
@@ -64,88 +65,89 @@ Does not have an effect if `org-link-descriptive' is nil."
 
 ;;;###autoload
 (define-minor-mode org-appear-mode
-  "A minor mode that automatically toggles fragments in Org mode."
+  "A minor mode that automatically toggles elements in Org mode."
   nil nil nil
 
   (cond
    (org-appear-mode
-    (org-appear--set-fragments)
+    (org-appear--set-elements)
     (add-hook 'post-command-hook #'org-appear--post-cmd nil t))
    (t
-    ;; Clean up the current fragment when disabling the mode
-    (let ((current-frag (org-appear--current-frag)))
-      (when current-frag
-	(org-appear--toggle-lock-and-flush current-frag)))
+    ;; Clean up current element when disabling the mode
+    (let ((current-elem (org-appear--current-elem)))
+      (when current-elem
+	(org-appear--toggle-lock-and-flush current-elem)))
     (remove-hook 'post-command-hook #'org-appear--post-cmd t))))
 
-(defvar org-appear-fragments nil
-  "List of Org fragments to toggle.")
+(defvar org-appear-elements nil
+  "List of Org elements to toggle.")
 
-(defun org-appear--set-fragments ()
-  "Add designated fragments to toggle to `org-appear-fragments'."
-  (let ((emph-fragments '(bold
-			  italic
-			  underline
-			  strike-through
-			  verbatim
-			  code))
-	(subscript-fragments '(subscript
-			       superscript))
-	(link-fragments '(link)))
+(defun org-appear--set-elements ()
+  "Add elements to toggle to `org-appear-elements'."
+  (let ((emphasis-elements '(bold
+			     italic
+			     underline
+			     strike-through
+			     verbatim
+			     code))
+	(script-elements '(subscript
+			   superscript))
+	(link-elements '(link)))
 
-    ;; TODO: is there a better way to do this?
-    (setq-local org-appear--prev-frag nil)
-    (setq org-appear-fragments nil)	; reset
+    ;; FIXME: is there a better way to do this?
+    (setq-local org-appear--prev-elem nil)
+    (setq org-appear-elements nil)	; reset
     (when (and org-hide-emphasis-markers org-appear-autoemphasis)
-      (setq org-appear-fragments (append org-appear-fragments emph-fragments)))
+      (setq org-appear-elements (append org-appear-elements emphasis-elements)))
     (when (and org-pretty-entities org-appear-autosubmarkers)
-      (setq org-appear-fragments (append org-appear-fragments subscript-fragments)))
+      (setq org-appear-elements (append org-appear-elements script-elements)))
     (when (and org-link-descriptive org-appear-autolinks)
-      (setq org-appear-fragments (append org-appear-fragments link-fragments)))))
+      (setq org-appear-elements (append org-appear-elements link-elements)))))
 
-(defvar-local org-appear--prev-frag nil
-  "Previous fragment that surrounded the cursor, or nil if the cursor was not
-on a fragment. This is used to track when the cursor leaves a fragment.")
+(defvar-local org-appear--prev-elem nil
+  "Previous element that surrounded the cursor or nil if the cursor was not
+on an element.")
 
 (defun org-appear--post-cmd ()
   "This function is executed by `post-command-hook' in `org-appear-mode'.
-It handles toggling fragments depending on whether the cursor entered or exited them."
-  (let* ((prev-frag org-appear--prev-frag)
-	 (prev-frag-start (org-element-property :begin prev-frag))
-	 (current-frag (org-appear--current-frag))
-	 (current-frag-start (org-element-property :begin current-frag)))
+It handles toggling elements depending on whether the cursor entered or exited them."
+  (let* ((prev-elem org-appear--prev-elem)
+	 (prev-elem-start (org-element-property :begin prev-elem))
+	 (current-elem (org-appear--current-elem))
+	 (current-elem-start (org-element-property :begin current-elem)))
 
-    ;; If the start position of current and previous fragments are not equal,
-    ;; we're in a new fragment
-    (when (not (equal prev-frag-start current-frag-start))
+    ;; If the start position of current and previous elements are not equal,
+    ;; they are considered different elements
+    (when (not (equal prev-elem-start current-elem-start))
 
-      ;; Unless we are still in an active fragment
-      (unless (and prev-frag current-frag)
-	(org-appear--toggle-lock-and-flush prev-frag))
+      ;; Unless transitioned from one element to another,
+      ;; re-enable jit-lock-mode
+      (unless (and prev-elem current-elem)
+	(org-appear--toggle-lock-and-flush prev-elem))
 
-      ;; We need to reevaluate `org-element-context' before disabling/enabling
-      ;; since it is possible to modify the fragment while it is enabled
-      (setq org-appear--prev-frag current-frag)
-      (when prev-frag
+      ;; Re-evaluate `org-element-context' before toggling elements
+      ;; since it is possible to modify element bounds while it is active
+      (setq org-appear--prev-elem current-elem)
+      (when prev-elem
 	(save-excursion
-	  (goto-char prev-frag-start)
+	  (goto-char prev-elem-start)
 	  (org-appear--hide-invisible (org-element-context))))
-      (when current-frag
+      (when current-elem
 	(save-excursion
-	  (goto-char current-frag-start)
+	  (goto-char current-elem-start)
 	  (org-appear--show-invisible (org-element-context)))))))
 
-(defun org-appear--current-frag ()
-  "Return element list of fragment at point.
+(defun org-appear--current-elem ()
+  "Return element at point.
 Return nil if element is not supported by `org-appear-mode'."
   (let ((elem (org-element-context)))
-    (if (member (car elem) org-appear-fragments)
+    (if (memq (car elem) org-appear-elements)
 	elem
       nil)))
 
 (defun org-appear--parse-elem (elem)
   "Return start, end, visible start, and visible end positions of element ELEM.
-If ELEM is not recognised by the package, return nil."
+Return nil if ELEM is not supported by `org-appear-mode'."
   (let* ((elem-type (car elem))
 	 (link-subtype (org-element-property :type elem))
 	 (elem-tag (cond ((memq elem-type '(bold
@@ -172,52 +174,51 @@ If ELEM is not recognised by the package, return nil."
 	     ;; The number of spaces is stored in the post-blank property
 	     (post-elem-spaces (org-element-property :post-blank elem))
 	     (elem-end-real (- elem-end post-elem-spaces)))
-	;; Verbatim fragments, code fragments, and link fragments without description
-	;; do not have contents-begin and contents-end properties,
-	;; hence the hard-coding of visible start/end
-	(list 'start elem-start
-	      'end elem-end-real
-	      'visible-start (pcase elem-tag
-			       ('emph (1+ elem-start))
-			       ('script elem-content-start)
-			       ('link (or elem-content-start (+ elem-start 2))))
-	      'visible-end (pcase elem-tag
-			     ('emph (1- elem-end-real))
-			     ('script elem-content-end)
-			     ('link (or elem-content-end (- elem-end-real 2)))))))))
+	;; Only sub/superscript elements are guaranteed to have
+	;; contents-begin and contents-end properties
+	`(:start ,elem-start
+		 :end ,elem-end-real
+		 :visible-start ,(pcase elem-tag
+				   ('emph (1+ elem-start))
+				   ('script elem-content-start)
+				   ('link (or elem-content-start (+ elem-start 2))))
+		 :visible-end ,(pcase elem-tag
+				 ('emph (1- elem-end-real))
+				 ('script elem-content-end)
+				 ('link (or elem-content-end (- elem-end-real 2)))))))))
 
-(defun org-appear--toggle-lock-and-flush (frag)
+(defun org-appear--toggle-lock-and-flush (elem)
   "Disable `jit-lock-mode' if it was enabled.
-Enable it otherwise, flushing previous fragment FRAG."
+Enable it otherwise, flushing previous element ELEM."
   (if jit-lock-mode
       (setq-local jit-lock-mode nil)
     (setq-local jit-lock-mode t)
-    ;; Flushing is necessary to make sure previous FRAG
+    ;; Make sure previous element
     ;; is refontified if it was just destroyed
-    (when frag
-      (font-lock-flush (max (org-element-property :begin frag) (point-min))
-		       (min (org-element-property :end frag) (point-max))))))
+    (when elem
+      (font-lock-flush (max (org-element-property :begin elem) (point-min))
+		       (min (org-element-property :end elem) (point-max))))))
 
-(defun org-appear--show-invisible (frag)
-  "Silently remove invisible property from invisible elements inside fragment FRAG."
-  (let ((frag-props (org-appear--parse-elem frag)))
-    (when frag-props			; Exit immediately if not valid FRAG
-      (let ((start (plist-get frag-props 'start))
-	    (end (plist-get frag-props 'end))
-	    (visible-start (plist-get frag-props 'visible-start))
-	    (visible-end (plist-get frag-props 'visible-end)))
+(defun org-appear--show-invisible (elem)
+  "Silently remove invisible property from invisible parts of element ELEM."
+  (let ((elem-at-point (org-appear--parse-elem elem)))
+    (when elem-at-point			; Exit immediately if not valid ELEM
+      (let ((start (plist-get elem-at-point :start))
+	    (end (plist-get elem-at-point :end))
+	    (visible-start (plist-get elem-at-point :visible-start))
+	    (visible-end (plist-get elem-at-point :visible-end)))
 	(with-silent-modifications
 	  (remove-text-properties start visible-start '(invisible org-link))
 	  (remove-text-properties visible-end end '(invisible org-link)))))))
 
-(defun org-appear--hide-invisible (frag)
-  "Silently add invisible property to invisible elements inside fragment FRAG."
-  (let ((frag-props (org-appear--parse-elem frag)))
-    (when frag-props			; Exit immediately if not valid FRAG
-      (let ((start (plist-get frag-props 'start))
-	    (end (plist-get frag-props 'end))
-	    (visible-start (plist-get frag-props 'visible-start))
-	    (visible-end (plist-get frag-props 'visible-end)))
+(defun org-appear--hide-invisible (elem)
+  "Silently add invisible property to invisible parts of element ELEM."
+  (let ((elem-at-point (org-appear--parse-elem elem)))
+    (when elem-at-point			; Exit immediately if not valid ELEM
+      (let ((start (plist-get elem-at-point :start))
+	    (end (plist-get elem-at-point :end))
+	    (visible-start (plist-get elem-at-point :visible-start))
+	    (visible-end (plist-get elem-at-point :visible-end)))
 	(with-silent-modifications
 	  (put-text-property start visible-start 'invisible 'org-link)
 	  (put-text-property visible-end end 'invisible 'org-link))))))
