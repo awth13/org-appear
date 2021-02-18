@@ -1,16 +1,16 @@
 * ~org-appear~
 
-Make invisible parts of Org fragments appear visible.
+Make invisible parts of Org elements appear visible.
 
 ** About
 
-[[https://orgmode.org/][Org mode]] provides a way to toggle visibility of emphasis markers, links, subscripts, and superscripts by customising variables such as ~org-hide-emphasis-markers~. However, it is currently not possible to do this interactively and on a fragment-by-fragment basis. Emphasis and verbatim marker toggling requires reloading the Org buffer; links and sub/superscripts are always toggled in the entire buffer. This package, inspired by [[https://github.com/io12/org-fragtog][org-fragtog]], enables automatic visibility toggling depending on cursor position. Hidden fragment parts appear when the cursor enters a fragment and disappear when it leaves.
+[[https://orgmode.org/][Org mode]] provides a way to toggle visibility of emphasis markers, links, subscripts, and superscripts by customising variables such as ~org-hide-emphasis-markers~. However, it is currently not possible to do this interactively and on an element-by-element basis. Emphasis and verbatim marker toggling requires reloading the Org buffer; links and sub/superscripts are always toggled in the entire buffer. This package, inspired by [[https://github.com/io12/org-fragtog][org-fragtog]], enables automatic visibility toggling depending on cursor position. Hidden fragment parts appear when the cursor enters an element and disappear when it leaves.
 
 [[file:demo.gif]]
 
 ** Installation
 
-With [[https://github.com/raxod502/straight.el][straight.el]], just put the following line in the ~init.el~:
+With [[https://github.com/raxod502/straight.el][straight.el]], simply put the following line in ~init.el~:
 
 #+begin_src emacs-lisp
 
@@ -47,4 +47,14 @@ The package can be enabled interactively or automatically on org-mode start-up:
 
 #+end_src
 
-Automatic toggling of fragments may be enabled by setting ~org-appear-autoemphasis~, ~org-appear-autolinks~, and ~org-appear-autosubmarkers~ custom variables to non-nil. By default, only ~org-appear-autoemphasis~ is enabled. If Org mode custom variables that control visibility of emphasis markers, links, or sub/superscripts are configured to show hidden parts, the respective ~org-appear~ settings do not have an effect.
+Automatic toggling of elements may be enabled by setting ~org-appear-autoemphasis~, ~org-appear-autolinks~, and ~org-appear-autosubmarkers~ custom variables to non-nil. By default, only ~org-appear-autoemphasis~ is enabled. If Org mode custom variables that control visibility of emphasis markers, links, or sub/superscripts are configured to show hidden parts, the respective ~org-appear~ settings do not have an effect.
+
+** Known Issues
+
+~org-appear~ does not handle overlapping emphasis elements correctly, e.g.,
+
+#+begin_example
+  *Why would someone /nest emphasis* like that?/
+#+end_example
+
+In the above example, ~org-appear~ can only detect and reveal the first (bold) element. This is due to the reliance on the ~org-element~ API -- ~org-element-context~ in particular -- which also fails to detect the second (italic) element.
