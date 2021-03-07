@@ -7,6 +7,7 @@
 ;; Version: 0.0.2
 ;; Description: Toggle Org mode element visibility upon entering and leaving
 ;; Homepage: https://github.com/awth13/org-appear
+;; Package-Requires: ((emacs "25.1"))
 
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
 ;; of this software and associated documentation files (the "Software"), to deal
@@ -82,6 +83,10 @@ Does not have an effect if `org-link-descriptive' is nil."
 (defvar org-appear-elements nil
   "List of Org elements to toggle.")
 
+(defvar-local org-appear--prev-elem nil
+  "Previous element that surrounded the cursor or nil if the cursor was not
+on an element.")
+
 (defun org-appear--set-elements ()
   "Add elements to toggle to `org-appear-elements'."
   (let ((emphasis-elements '(bold
@@ -94,7 +99,7 @@ Does not have an effect if `org-link-descriptive' is nil."
 			   superscript))
 	(link-elements '(link)))
 
-    ;; FIXME: is there a better way to do this?
+    ;; HACK: is there a better way to do this?
     (setq-local org-appear--prev-elem nil)
     (setq org-appear-elements nil)	; reset
     (when (and org-hide-emphasis-markers org-appear-autoemphasis)
@@ -103,10 +108,6 @@ Does not have an effect if `org-link-descriptive' is nil."
       (setq org-appear-elements (append org-appear-elements script-elements)))
     (when (and org-link-descriptive org-appear-autolinks)
       (setq org-appear-elements (append org-appear-elements link-elements)))))
-
-(defvar-local org-appear--prev-elem nil
-  "Previous element that surrounded the cursor or nil if the cursor was not
-on an element.")
 
 (defun org-appear--post-cmd ()
   "This function is executed by `post-command-hook' in `org-appear-mode'.
@@ -171,8 +172,8 @@ Return nil if element is not supported by `org-appear-mode'."
 					    superscript))
 			  'script)
 			 ;; Nothing to hide in cite links
-			 ((and (not (string= link-subtype "cite"))
-			       (eq elem-type 'link))
+			 ((and (eq elem-type 'link)
+			       (not (string= link-subtype "cite")))
 			  'link)
 			 (t nil)))
 	 (elem-start (org-element-property :begin elem))
