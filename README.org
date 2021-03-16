@@ -4,11 +4,15 @@ Make invisible parts of Org elements appear visible.
 
 ** About
 
-[[https://orgmode.org/][Org mode]] provides a way to toggle visibility of emphasis markers, links, subscripts, and superscripts by customising variables such as ~org-hide-emphasis-markers~. However, it is currently not possible to do this interactively and on an element-by-element basis. Emphasis and verbatim marker toggling requires reloading the Org buffer; links and sub/superscripts are always toggled in the entire buffer. This package, inspired by [[https://github.com/io12/org-fragtog][org-fragtog]], enables automatic visibility toggling depending on cursor position. Hidden fragment parts appear when the cursor enters an element and disappear when it leaves.
+[[https://orgmode.org/][Org mode]] provides a way to toggle visibility of emphasis markers, links, subscripts, and superscripts by customising variables such as ~org-hide-emphasis-markers~. However, it is currently not possible to do this interactively and on an element-by-element basis. Emphasis and verbatim marker toggling requires reloading the Org buffer; links and sub/superscripts are always toggled in the entire buffer. This package, inspired by [[https://github.com/io12/org-fragtog][org-fragtog]], enables automatic visibility toggling depending on cursor position. Hidden element parts appear when the cursor enters an element and disappear when it leaves.
 
 [[file:demo.gif]]
 
 ** Installation
+
+The easiest way to install ~org-appear~ is from MELPA, using your favourite package manager or ~package-install~. For Guix users, ~org-appear~ is also available in the official GNU Guix channel.
+
+** Manual installation
 
 With [[https://github.com/raxod502/straight.el][straight.el]], simply put the following line in ~init.el~:
 
@@ -18,24 +22,7 @@ With [[https://github.com/raxod502/straight.el][straight.el]], simply put the fo
 
 #+end_src
 
-Alternatively, git clone this repository and point Emacs to it.
-
-With ~use-package~:
-
-#+begin_src emacs-lisp
-
-  (use-package org-appear
-    :load-path "/path/to/org-appear-dir")
-
-#+end_src
-
-With ~require~:
-
-#+begin_src emacs-lisp
-
-  (require 'org-appear "/path/to/org-appear.el")
-
-#+end_src
+Alternatively, git clone this repository and point Emacs to it using the ~:load-path~ keyword of ~use-package~ or ~require~.
 
 ** Usage
 
@@ -58,3 +45,5 @@ Automatic toggling of elements may be enabled by setting ~org-appear-autoemphasi
 #+end_example
 
 In the above example, ~org-appear~ can only detect and reveal the first (bold) element. This is due to the reliance on the ~org-element~ API -- ~org-element-context~ in particular -- which also fails to detect the second (italic) element.
+
+Since the ~org-element~ API allows any number of spaces after an element, ~org-appear~ toggles the last element on the previous line if the current line is empty.
