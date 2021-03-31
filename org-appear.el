@@ -58,6 +58,12 @@ Does not have an effect if `org-pretty-entities' is nil."
   :type 'boolean
   :group 'org-appear)
 
+(defcustom org-appear-autoentities nil
+  "Non-nil enables automatic toggling of org entities.
+Does not have an effect if `org-pretty-entities' is nil."
+  :type 'boolean
+  :group 'org-appear)
+
 (defcustom org-appear-autolinks nil
   "Non-nil enables automatic toggling of links.
 Does not have an effect if `org-link-descriptive' is nil."
@@ -97,6 +103,7 @@ on an element.")
 			     code))
 	(script-elements '(subscript
 			   superscript))
+	(entity-elements '(entity))
 	(link-elements '(link)))
 
     ;; HACK: is there a better way to do this?
@@ -106,6 +113,8 @@ on an element.")
       (setq org-appear-elements (append org-appear-elements emphasis-elements)))
     (when (and org-pretty-entities org-appear-autosubmarkers)
       (setq org-appear-elements (append org-appear-elements script-elements)))
+    (when (and org-pretty-entities org-appear-autoentities)
+      (setq org-appear-elements (append org-appear-elements entity-elements)))
     (when (and org-link-descriptive org-appear-autolinks)
       (setq org-appear-elements (append org-appear-elements link-elements)))))
 
@@ -171,6 +180,8 @@ Return nil if element is not supported by `org-appear-mode'."
 			 ((memq elem-type '(subscript
 					    superscript))
 			  'script)
+			 ((eq elem-type 'entity)
+				'entity)
 			 ;; Nothing to hide in cite links
 			 ((and (eq elem-type 'link)
 			       (not (string= link-subtype "cite")))
@@ -192,10 +203,12 @@ Return nil if element is not supported by `org-appear-mode'."
 	     :visible-start ,(pcase elem-tag
 			       ('emph (1+ elem-start))
 			       ('script elem-content-start)
+			       ('entity elem-start) ;; Unused, but implemented for consistency
 			       ('link (or elem-content-start (+ elem-start 2))))
 	     :visible-end ,(pcase elem-tag
 			     ('emph (1- elem-end-real))
 			     ('script elem-content-end)
+			     ('entity elem-end-real) ;; Unused, but implemented for consistency
 			     ('link (or elem-content-end (- elem-end-real 2))))
 	     :parent ,elem-parent)))
 
@@ -209,7 +222,8 @@ Return nil if element is not supported by `org-appear-mode'."
 	 (parent (plist-get elem-at-point :parent)))
     (with-silent-modifications
       (remove-text-properties start visible-start '(invisible org-link))
-      (remove-text-properties visible-end end '(invisible org-link)))
+      (remove-text-properties visible-end end '(invisible org-link))
+      (remove-text-properties start end '(composition)))
     ;; To minimise distraction from moving text,
     ;; always keep parent emphasis markers visible
     (when parent
