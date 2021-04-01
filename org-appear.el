@@ -58,6 +58,12 @@ Does not have an effect if `org-pretty-entities' is nil."
   :type 'boolean
   :group 'org-appear)
 
+(defcustom org-appear-autoentities nil
+  "Non-nil enables automatic toggling of org entities.
+Does not have an effect if `org-pretty-entities' is nil."
+  :type 'boolean
+  :group 'org-appear)
+
 (defcustom org-appear-autolinks nil
   "Non-nil enables automatic toggling of links.
 Does not have an effect if `org-link-descriptive' is nil."
@@ -97,6 +103,7 @@ on an element.")
 			     code))
 	(script-elements '(subscript
 			   superscript))
+	(entity-elements '(entity))
 	(link-elements '(link)))
 
     ;; HACK: is there a better way to do this?
@@ -106,6 +113,8 @@ on an element.")
       (setq org-appear-elements (append org-appear-elements emphasis-elements)))
     (when (and org-pretty-entities org-appear-autosubmarkers)
       (setq org-appear-elements (append org-appear-elements script-elements)))
+    (when (and org-pretty-entities org-appear-autoentities)
+      (setq org-appear-elements (append org-appear-elements entity-elements)))
     (when (and org-link-descriptive org-appear-autolinks)
       (setq org-appear-elements (append org-appear-elements link-elements)))))
 
@@ -173,6 +182,8 @@ Return nil if element is not supported by `org-appear-mode'."
 			 ((memq elem-type '(subscript
 					    superscript))
 			  'script)
+			 ((eq elem-type 'entity)
+				'entity)
 			 ;; Nothing to hide in cite links
 			 ((and (eq elem-type 'link)
 			       (not (string= link-subtype "cite")))
@@ -204,14 +215,17 @@ Return nil if element is not supported by `org-appear-mode'."
 (defun org-appear--show-invisible (elem)
   "Silently remove invisible property from invisible parts of element ELEM."
   (let* ((elem-at-point (org-appear--parse-elem elem))
+	 (elem-type (car elem))
 	 (start (plist-get elem-at-point :start))
 	 (end (plist-get elem-at-point :end))
 	 (visible-start (plist-get elem-at-point :visible-start))
 	 (visible-end (plist-get elem-at-point :visible-end))
 	 (parent (plist-get elem-at-point :parent)))
     (with-silent-modifications
-      (remove-text-properties start visible-start '(invisible org-link))
-      (remove-text-properties visible-end end '(invisible org-link)))
+      (if (eq elem-type 'entity)
+	  (remove-text-properties start end '(composition))
+	(remove-text-properties start visible-start '(invisible org-link))
+	(remove-text-properties visible-end end '(invisible org-link))))
     ;; To minimise distraction from moving text,
     ;; always keep parent emphasis markers visible
     (when parent
@@ -220,12 +234,15 @@ Return nil if element is not supported by `org-appear-mode'."
 (defun org-appear--hide-invisible (elem)
   "Flush fontification of element ELEM."
   (let* ((elem-at-point (org-appear--parse-elem elem))
+	 (elem-type (car elem))
 	 (start (plist-get elem-at-point :start))
 	 (end (plist-get elem-at-point :end)))
     (font-lock-flush start end)
     ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
     ;; from refontifying the next element entered
-    (font-lock-ensure start end)))
+    (font-lock-ensure start end)
+    (when (eq elem-type 'entity)
+      (goto-char start))))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
