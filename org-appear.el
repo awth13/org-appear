@@ -220,11 +220,11 @@ Return nil if element is not supported by `org-appear-mode'."
 	 (visible-end (plist-get elem-at-point :visible-end))
 	 (parent (plist-get elem-at-point :parent)))
     (with-silent-modifications
-			(if (eq elem-type 'entity)
-					(remove-text-properties start end '(composition))
-				(remove-text-properties start visible-start '(invisible org-link))
-				(remove-text-properties visible-end end '(invisible org-link))))
-		;; To minimise distraction from moving text,
+      (if (eq elem-type 'entity)
+	  (remove-text-properties start end '(composition))
+	(remove-text-properties start visible-start '(invisible org-link))
+	(remove-text-properties visible-end end '(invisible org-link))))
+    ;; To minimise distraction from moving text,
     ;; always keep parent emphasis markers visible
     (when parent
       (org-appear--show-invisible parent))))
@@ -239,8 +239,8 @@ Return nil if element is not supported by `org-appear-mode'."
     ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
     ;; from refontifying the next element entered
     (font-lock-ensure start end)
-		(when (eq elem-type 'entity)
-			(goto-char start))))
+    (when (eq elem-type 'entity)
+      (goto-char start))))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
