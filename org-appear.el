@@ -125,7 +125,9 @@ It handles toggling elements depending on whether the cursor entered or exited t
 	(goto-char prev-elem-start)
 	;; Reevaluate `org-element-context' in case the bounds
 	;; of the previous element changed
-	(org-appear--hide-invisible (org-element-context))))
+	(org-appear--hide-invisible (org-element-context))
+	;; Forget previous element
+	(setq org-appear--prev-elem nil)))
 
     ;; Unhide invisible parts of current element after each command
     (when current-elem
