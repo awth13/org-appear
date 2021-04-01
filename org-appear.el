@@ -7,7 +7,7 @@
 ;; Version: 0.0.2
 ;; Description: Toggle Org mode element visibility upon entering and leaving
 ;; Homepage: https://github.com/awth13/org-appear
-;; Package-Requires: ((emacs "25.1"))
+;; Package-Requires: ((emacs "25.1") (org "9.3"))
 
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
 ;; of this software and associated documentation files (the "Software"), to deal
