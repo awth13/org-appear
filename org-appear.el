@@ -203,28 +203,28 @@ Return nil if element is not supported by `org-appear-mode'."
 	     :visible-start ,(pcase elem-tag
 			       ('emph (1+ elem-start))
 			       ('script elem-content-start)
-			       ('entity elem-start) ;; Unused, but implemented for consistency
 			       ('link (or elem-content-start (+ elem-start 2))))
 	     :visible-end ,(pcase elem-tag
 			     ('emph (1- elem-end-real))
 			     ('script elem-content-end)
-			     ('entity elem-end-real) ;; Unused, but implemented for consistency
 			     ('link (or elem-content-end (- elem-end-real 2))))
 	     :parent ,elem-parent)))
 
 (defun org-appear--show-invisible (elem)
   "Silently remove invisible property from invisible parts of element ELEM."
   (let* ((elem-at-point (org-appear--parse-elem elem))
+	 (elem-type (car elem))
 	 (start (plist-get elem-at-point :start))
 	 (end (plist-get elem-at-point :end))
 	 (visible-start (plist-get elem-at-point :visible-start))
 	 (visible-end (plist-get elem-at-point :visible-end))
 	 (parent (plist-get elem-at-point :parent)))
     (with-silent-modifications
-      (remove-text-properties start visible-start '(invisible org-link))
-      (remove-text-properties visible-end end '(invisible org-link))
-      (remove-text-properties start end '(composition)))
-    ;; To minimise distraction from moving text,
+			(if (eq elem-type 'entity)
+					(remove-text-properties start end '(composition))
+				(remove-text-properties start visible-start '(invisible org-link))
+				(remove-text-properties visible-end end '(invisible org-link))))
+		;; To minimise distraction from moving text,
     ;; always keep parent emphasis markers visible
     (when parent
       (org-appear--show-invisible parent))))
@@ -232,12 +232,15 @@ Return nil if element is not supported by `org-appear-mode'."
 (defun org-appear--hide-invisible (elem)
   "Flush fontification of element ELEM."
   (let* ((elem-at-point (org-appear--parse-elem elem))
+	 (elem-type (car elem))
 	 (start (plist-get elem-at-point :start))
 	 (end (plist-get elem-at-point :end)))
     (font-lock-flush start end)
     ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
     ;; from refontifying the next element entered
-    (font-lock-ensure start end)))
+    (font-lock-ensure start end)
+		(when (eq elem-type 'entity)
+			(goto-char start))))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
