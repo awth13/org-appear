@@ -34,7 +34,7 @@ The package can be enabled interactively or automatically on org-mode start-up:
 
 #+end_src
 
-Automatic toggling of elements may be enabled by setting ~org-appear-autoemphasis~, ~org-appear-autolinks~, and ~org-appear-autosubmarkers~ custom variables to non-nil. By default, only ~org-appear-autoemphasis~ is enabled. If Org mode custom variables that control visibility of emphasis markers, links, or sub/superscripts are configured to show hidden parts, the respective ~org-appear~ settings do not have an effect.
+Automatic toggling of elements may be enabled by setting ~org-appear-autoemphasis~, ~org-appear-autolinks~, ~org-appear-autosubmarkers~, and ~org-appear-autoentities~ custom variables to non-nil. By default, only ~org-appear-autoemphasis~ is enabled. If Org mode custom variables that control visibility of emphasis markers, links, or sub/superscripts are configured to show hidden parts, the respective ~org-appear~ settings do not have an effect.
 
 ** Known Issues
 
