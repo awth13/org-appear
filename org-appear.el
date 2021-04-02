@@ -64,8 +64,14 @@ Does not have an effect if `org-link-descriptive' is nil."
   :type 'boolean
   :group 'org-appear)
 
-(defcustom org-appear-idle-delay 0
-  "Seconds to wait before toggling links and emphasis markers."
+(defcustom org-appear-show-delay 0.5
+  "Seconds to wait before showing links and emphasis markers."
+  :type 'number
+  :group 'org-appear)
+
+(defcustom org-appear-hide-delay 0
+  "Seconds to wait before hiding links and emphasis markers.
+The value should not be greater than the `org-appear-show-delay'."
   :type 'number
   :group 'org-appear)
 
@@ -117,32 +123,35 @@ on an element.")
 (defun org-appear--post-cmd ()
   "This function is executed by `post-command-hook' in `org-appear-mode'.
 It handles toggling elements depending on whether the cursor entered or exited them."
-  (run-with-idle-timer
-   org-appear-idle-delay nil
-   (lambda ()
-     (let* ((prev-elem org-appear--prev-elem)
-            (prev-elem-start (org-element-property :begin prev-elem))
-            (current-elem (org-appear--current-elem))
-            (current-elem-start (org-element-property :begin current-elem))
-            (current-elem-end (org-element-property :end current-elem)))
+  (let* ((prev-elem org-appear--prev-elem)
+	 (prev-elem-start (org-element-property :begin prev-elem))
+	 (current-elem (org-appear--current-elem))
+	 (current-elem-start (org-element-property :begin current-elem))
+	 (current-elem-end (org-element-property :end current-elem)))
 
-       ;; Hide invisible parts of previous element if cursor left it
-       (when (and prev-elem
-                  (not (equal prev-elem-start current-elem-start)))
-         (save-excursion
-           (goto-char prev-elem-start)
-           ;; Reevaluate `org-element-context' in case the bounds
-           ;; of the previous element changed
-           (org-appear--hide-invisible (org-element-context))))
+    ;; Hide invisible parts of previous element if cursor left it
+    (when (and prev-elem
+	       (not (equal prev-elem-start current-elem-start)))
+      (save-excursion
+        (goto-char prev-elem-start)
+        ;; Reevaluate `org-element-context' in case the bounds
+        ;; of the previous element changed
+        (run-with-idle-timer
+         org-appear-hide-delay nil
+         #'org-appear--hide-invisible (org-element-context))))
 
-       ;; Unhide invisible parts of current element after each command
-       (when current-elem
-         ;; Remember current element as the last visited element
-         (setq org-appear--prev-elem current-elem)
-         ;; Call `font-lock-ensure' before unhiding to prevent `jit-lock-mode'
-         ;; from refontifying the element region after changes in buffer
-         (font-lock-ensure current-elem-start current-elem-end)
-         (org-appear--show-invisible current-elem))))))
+    ;; Unhide invisible parts of current element after each command
+    (when current-elem
+      ;; Remember current element as the last visited element
+      (setq org-appear--prev-elem current-elem)
+      ;; Call `font-lock-ensure' before unhiding to prevent `jit-lock-mode'
+      ;; from refontifying the element region after changes in buffer
+      (font-lock-ensure current-elem-start current-elem-end)
+      (if (equal prev-elem-start current-elem-start)
+          (org-appear--show-invisible current-elem)
+        (run-with-idle-timer
+         org-appear-show-delay nil
+         #'org-appear--show-invisible current-elem)))))
 
 (defun org-appear--current-elem ()
   "Return element at point.
@@ -209,18 +218,18 @@ Return nil if element is not supported by `org-appear-mode'."
 
 (defun org-appear--show-invisible (elem)
   "Silently remove invisible property from invisible parts of element ELEM."
-  (let* ((elem-at-point (org-appear--parse-elem elem))
+  (when-let* ((elem-at-point (org-appear--parse-elem elem))
 	 (start (plist-get elem-at-point :start))
 	 (end (plist-get elem-at-point :end))
+     (_point-at-elem-p (<= start (point) end))
 	 (visible-start (plist-get elem-at-point :visible-start))
-	 (visible-end (plist-get elem-at-point :visible-end))
-	 (parent (plist-get elem-at-point :parent)))
+	 (visible-end (plist-get elem-at-point :visible-end)))
     (with-silent-modifications
       (remove-text-properties start visible-start '(invisible org-link))
       (remove-text-properties visible-end end '(invisible org-link)))
     ;; To minimise distraction from moving text,
     ;; always keep parent emphasis markers visible
-    (when parent
+    (when-let ((parent (plist-get elem-at-point :parent)))
       (org-appear--show-invisible parent))))
 
 (defun org-appear--hide-invisible (elem)
