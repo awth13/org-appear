@@ -218,19 +218,22 @@ Return nil if element is not supported by `org-appear-mode'."
 
 (defun org-appear--show-invisible (elem)
   "Silently remove invisible property from invisible parts of element ELEM."
-  (when-let* ((elem-at-point (org-appear--parse-elem elem))
+  (let* ((elem-at-point (org-appear--parse-elem elem))
 	 (start (plist-get elem-at-point :start))
 	 (end (plist-get elem-at-point :end))
-     (_point-at-elem-p (<= start (point) end))
 	 (visible-start (plist-get elem-at-point :visible-start))
-	 (visible-end (plist-get elem-at-point :visible-end)))
-    (with-silent-modifications
-      (remove-text-properties start visible-start '(invisible org-link))
-      (remove-text-properties visible-end end '(invisible org-link)))
-    ;; To minimise distraction from moving text,
-    ;; always keep parent emphasis markers visible
-    (when-let ((parent (plist-get elem-at-point :parent)))
-      (org-appear--show-invisible parent))))
+	 (visible-end (plist-get elem-at-point :visible-end))
+	 (parent (plist-get elem-at-point :parent))
+	 (parent-start (plist-get parent :begin))
+	 (parent-end (plist-get parent :end)))
+	(when (and start end (<= start (point) end))
+      (with-silent-modifications
+        (remove-text-properties start visible-start '(invisible org-link))
+        (remove-text-properties visible-end end '(invisible org-link)))
+      ;; To minimise distraction from moving text,
+      ;; always keep parent emphasis markers visible
+      (when (and parent (<= parent-start (point) parent-end))
+        (org-appear--show-invisible parent)))))
 
 (defun org-appear--hide-invisible (elem)
   "Flush fontification of element ELEM."
