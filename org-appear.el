@@ -72,12 +72,14 @@ Does not have an effect if `org-link-descriptive' is nil."
   (cond
    (org-appear-mode
     (org-appear--set-elements)
+	(advice-add 'self-insert-command :around #'org-appear--inhibit-link-flicker)
     (add-hook 'post-command-hook #'org-appear--post-cmd nil t))
    (t
     ;; Clean up current element when disabling the mode
     (let ((current-elem (org-appear--current-elem)))
       (when current-elem
 	(org-appear--hide-invisible current-elem)))
+	(advice-remove 'self-insert-command #'org-appear--inhibit-link-flicker)
     (remove-hook 'post-command-hook #'org-appear--post-cmd t))))
 
 (defvar org-appear-elements nil
@@ -108,6 +110,27 @@ on an element.")
       (setq org-appear-elements (append org-appear-elements script-elements)))
     (when (and org-link-descriptive org-appear-autolinks)
       (setq org-appear-elements (append org-appear-elements link-elements)))))
+
+(defun org-appear--inhibit-link-flicker (orig-fn n &optional c)
+  "Advice around function `self-insert-command'.
+
+The `blink-paren-function' which is called after the close parenthesis of link
+is inserted, will cause a delay of about 1 second (see `blink-matching-delay')
+before the `post-command-hook', it makes the invisible part of the link
+suddenly hidden and then reappear, for example:
+
+              insert ]      after 1s
+    [[a][b]| ---------> b| ---------> [[a][b]]|
+"
+  (let ((backup (when (derived-mode-p 'org-mode) blink-paren-function)))
+	(let ((inhibit-message t)))
+	(unwind-protect
+		(progn
+		  (when backup
+			(setq blink-paren-function nil))
+		  (funcall orig-fn n c))
+	  (when backup
+		(setq blink-paren-function backup)))))
 
 (defun org-appear--post-cmd ()
   "This function is executed by `post-command-hook' in `org-appear-mode'.
