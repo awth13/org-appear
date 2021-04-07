@@ -75,6 +75,10 @@ The value should not be greater than the `org-appear-show-delay'."
   :type 'number
   :group 'org-appear)
 
+(defvar-local org-appear--show-timer nil "Timer to show elements.")
+
+(defvar-local org-appear--buffer-prev-size nil "Previous size of buffer.")
+
 ;;;###autoload
 (define-minor-mode org-appear-mode
   "A minor mode that automatically toggles elements in Org mode."
@@ -83,6 +87,7 @@ The value should not be greater than the `org-appear-show-delay'."
   (cond
    (org-appear-mode
     (org-appear--set-elements)
+	(setq org-appear--buffer-prev-size (buffer-size))
     (add-hook 'post-command-hook #'org-appear--post-cmd nil t))
    (t
     ;; Clean up current element when disabling the mode
@@ -125,9 +130,12 @@ on an element.")
 It handles toggling elements depending on whether the cursor entered or exited them."
   (let* ((prev-elem org-appear--prev-elem)
 	 (prev-elem-start (org-element-property :begin prev-elem))
+	 (prev-elem-end (org-element-property :end prev-elem))
+	 (current-size (buffer-size))
 	 (current-elem (org-appear--current-elem))
 	 (current-elem-start (org-element-property :begin current-elem))
-	 (current-elem-end (org-element-property :end current-elem)))
+	 (current-elem-end (org-element-property :end current-elem))
+	 (editing-p (not (equal current-size org-appear--buffer-prev-size))))
 
     ;; Hide invisible parts of previous element if cursor left it
     (when (and prev-elem
@@ -140,6 +148,8 @@ It handles toggling elements depending on whether the cursor entered or exited t
          org-appear-hide-delay nil
          #'org-appear--hide-invisible (org-element-context))))
 
+	(setq org-appear--buffer-prev-size current-size)
+
     ;; Unhide invisible parts of current element after each command
     (when current-elem
       ;; Remember current element as the last visited element
@@ -147,11 +157,16 @@ It handles toggling elements depending on whether the cursor entered or exited t
       ;; Call `font-lock-ensure' before unhiding to prevent `jit-lock-mode'
       ;; from refontifying the element region after changes in buffer
       (font-lock-ensure current-elem-start current-elem-end)
-      (if (equal prev-elem-start current-elem-start)
-          (org-appear--show-invisible current-elem)
-        (run-with-idle-timer
-         org-appear-show-delay nil
-         #'org-appear--show-invisible current-elem)))))
+	  ;; Terminate the unfinished timer
+	  (when org-appear--show-timer
+		(cancel-timer org-appear--show-timer))
+	  (if editing-p
+		  ;; Editing, no timer required
+		  (org-appear--show-invisible current-elem)
+		(setq org-appear--show-timer
+			  (run-with-idle-timer
+			   org-appear-show-delay nil
+			   #'org-appear--show-invisible current-elem))))))
 
 (defun org-appear--current-elem ()
   "Return element at point.
@@ -226,7 +241,7 @@ Return nil if element is not supported by `org-appear-mode'."
 	 (parent (plist-get elem-at-point :parent))
 	 (parent-start (plist-get parent :begin))
 	 (parent-end (plist-get parent :end)))
-	(when (and start end (<= start (point) end))
+	(when (and start end (<= start end (point-max)) (<= start (point) end))
       (with-silent-modifications
         (remove-text-properties start visible-start '(invisible org-link))
         (remove-text-properties visible-end end '(invisible org-link)))
@@ -240,10 +255,11 @@ Return nil if element is not supported by `org-appear-mode'."
   (let* ((elem-at-point (org-appear--parse-elem elem))
 	 (start (plist-get elem-at-point :start))
 	 (end (plist-get elem-at-point :end)))
-    (font-lock-flush start end)
-    ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
-    ;; from refontifying the next element entered
-    (font-lock-ensure start end)))
+	(when (and start end (<= start end (point-max)) (not (<= start (point) end)))
+      (font-lock-flush start end)
+      ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
+      ;; from refontifying the next element entered
+      (font-lock-ensure start end))))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
