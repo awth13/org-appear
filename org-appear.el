@@ -88,6 +88,11 @@ Does not have an effect if `org-hidden-keywords' is nil."
   :type 'boolean
   :group 'org-appear)
 
+(defcustom org-appear-clearlatex nil
+  "Non-nil enables automatic cleaning of Latex inline math blocks."
+  :type 'boolean
+  :group 'org-appear)
+
 (defcustom org-appear-delay 0.0
   "Seconds of delay before toggling an element."
   :type 'number
@@ -149,7 +154,8 @@ nil if the cursor was not on an element.")
 			   superscript))
 	(entity-elements '(entity))
 	(link-elements '(link))
-	(keyword-elements '(keyword)))
+	(keyword-elements '(keyword))
+	(latex-elements '(latex-fragment)))
 
     ;; HACK: is there a better way to do this?
     (setq-local org-appear--prev-elem nil)
@@ -163,7 +169,9 @@ nil if the cursor was not on an element.")
     (when (and org-link-descriptive org-appear-autolinks)
       (setq org-appear-elements (append org-appear-elements link-elements)))
     (when (and org-hidden-keywords org-appear-autokeywords)
-      (setq org-appear-elements (append org-appear-elements keyword-elements)))))
+      (setq org-appear-elements (append org-appear-elements keyword-elements)))
+    (when org-appear-clearlatex
+      (setq org-appear-elements (append org-appear-elements latex-elements)))))
 
 (defun org-appear--post-cmd ()
   "This function is executed by `post-command-hook' in `org-appear-mode'.
@@ -290,6 +298,8 @@ Return nil if element cannot be parsed."
 			  'link)
 			 ((eq elem-type 'keyword)
 			  'keyword)
+			 ((eq elem-type 'latex-fragment)
+			  'latex-fragment)
 			 (t nil)))
 	 (elem-start (org-element-property :begin elem))
 	 (elem-end (org-element-property :end elem))
@@ -324,6 +334,8 @@ Return nil if element cannot be parsed."
     (with-silent-modifications
       (cond ((eq elem-type 'entity)
 	     (decompose-region start end))
+	    ((eq elem-type 'latex-fragment)
+	     (remove-text-properties start end '(invisible composition)))
 	    ((eq elem-type 'keyword)
 	     (remove-text-properties start end '(invisible org-link)))
 	    (t
