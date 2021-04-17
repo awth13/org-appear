@@ -169,7 +169,8 @@ Return nil if element is not supported by `org-appear-mode'."
       parent)))
 
 (defun org-appear--parse-elem (elem)
-  "Return bounds of element ELEM and its parent if ELEM is nested."
+  "Return bounds of element ELEM and its parent if ELEM is nested.
+Return nil if element cannot be parsed."
   (let* ((elem-type (car elem))
 	 (link-subtype (org-element-property :type elem))
 	 (elem-tag (cond ((memq elem-type '(bold
@@ -183,7 +184,7 @@ Return nil if element is not supported by `org-appear-mode'."
 					    superscript))
 			  'script)
 			 ((eq elem-type 'entity)
-				'entity)
+			  'entity)
 			 ;; Nothing to hide in cite links
 			 ((and (eq elem-type 'link)
 			       (not (string= link-subtype "cite")))
@@ -200,49 +201,52 @@ Return nil if element is not supported by `org-appear-mode'."
 	 (elem-parent (org-appear--get-parent elem)))
     ;; Only sub/superscript elements are guaranteed to have
     ;; contents-begin and contents-end properties
-    `(:start ,elem-start
-	     :end ,elem-end-real
-	     :visible-start ,(pcase elem-tag
-			       ('emph (1+ elem-start))
-			       ('script elem-content-start)
-			       ('link (or elem-content-start (+ elem-start 2))))
-	     :visible-end ,(pcase elem-tag
-			     ('emph (1- elem-end-real))
-			     ('script elem-content-end)
-			     ('link (or elem-content-end (- elem-end-real 2))))
-	     :parent ,elem-parent)))
+    (when elem-tag
+      `(:start ,elem-start
+	       :end ,elem-end-real
+	       :visible-start ,(pcase elem-tag
+				 ('emph (1+ elem-start))
+				 ('script elem-content-start)
+				 ('link (or elem-content-start (+ elem-start 2))))
+	       :visible-end ,(pcase elem-tag
+			       ('emph (1- elem-end-real))
+			       ('script elem-content-end)
+			       ('link (or elem-content-end (- elem-end-real 2))))
+	       :parent ,elem-parent))))
 
 (defun org-appear--show-invisible (elem)
   "Silently remove invisible property from invisible parts of element ELEM."
-  (let* ((elem-at-point (org-appear--parse-elem elem))
-	 (elem-type (car elem))
-	 (start (plist-get elem-at-point :start))
-	 (end (plist-get elem-at-point :end))
-	 (visible-start (plist-get elem-at-point :visible-start))
-	 (visible-end (plist-get elem-at-point :visible-end))
-	 (parent (plist-get elem-at-point :parent)))
-    (with-silent-modifications
-      (if (eq elem-type 'entity)
-	  (remove-text-properties start end '(composition))
-	(remove-text-properties start visible-start '(invisible org-link))
-	(remove-text-properties visible-end end '(invisible org-link))))
-    ;; To minimise distraction from moving text,
-    ;; always keep parent emphasis markers visible
-    (when parent
-      (org-appear--show-invisible parent))))
+  ;; Skip illegal elements
+  (when-let ((elem-at-point (org-appear--parse-elem elem)))
+    (let ((elem-type (car elem))
+	  (start (plist-get elem-at-point :start))
+	  (end (plist-get elem-at-point :end))
+	  (visible-start (plist-get elem-at-point :visible-start))
+	  (visible-end (plist-get elem-at-point :visible-end))
+	  (parent (plist-get elem-at-point :parent)))
+      (with-silent-modifications
+	(if (eq elem-type 'entity)
+	    (remove-text-properties start end '(composition))
+	  (remove-text-properties start visible-start '(invisible org-link))
+	  (remove-text-properties visible-end end '(invisible org-link))))
+      ;; To minimise distraction from moving text,
+      ;; always keep parent emphasis markers visible
+      (when parent
+	(org-appear--show-invisible parent)))))
 
 (defun org-appear--hide-invisible (elem)
   "Flush fontification of element ELEM."
-  (let* ((elem-at-point (org-appear--parse-elem elem))
-	 (elem-type (car elem))
-	 (start (plist-get elem-at-point :start))
-	 (end (plist-get elem-at-point :end)))
-    (font-lock-flush start end)
-    ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
-    ;; from refontifying the next element entered
-    (font-lock-ensure start end)
-    (when (eq elem-type 'entity)
-      (goto-char start))))
+  ;; Skip illegal elements
+  (when-let ((elem-at-point (org-appear--parse-elem elem)))
+    (let ((elem-type (car elem))
+	  (start (plist-get elem-at-point :start))
+	  (end (plist-get elem-at-point :end)))
+      (font-lock-flush start end)
+      ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
+      ;; from refontifying the next element entered
+      (font-lock-ensure start end)
+      (when (eq elem-type 'entity)
+	(goto-char start)))))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
