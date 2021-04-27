@@ -73,7 +73,9 @@ Does not have an effect if `org-link-descriptive' is nil."
 ;;;###autoload
 (define-minor-mode org-appear-mode
   "A minor mode that automatically toggles elements in Org mode."
-  nil nil nil
+  :init-value nil
+  :lighter nil
+  :keymap nil
 
   (cond
    (org-appear-mode
