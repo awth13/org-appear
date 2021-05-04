@@ -203,7 +203,8 @@ Return nil if element cannot be parsed."
 	 (elem-parent (org-appear--get-parent elem)))
     ;; Only sub/superscript elements are guaranteed to have
     ;; contents-begin and contents-end properties
-    (when elem-tag
+    (when (and elem-tag
+	       (<= elem-start (point) elem-end-real))
       `(:start ,elem-start
 	       :end ,elem-end-real
 	       :visible-start ,(pcase elem-tag
