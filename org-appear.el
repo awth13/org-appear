@@ -155,7 +155,7 @@ Return nil if element is not supported by `org-appear-mode'."
   (let* ((elem (org-element-context))
 	 (elem-type (car elem))
 	 (elem-end (- (org-element-property :end elem)
-		      (org-element-property :post-blank elem))))
+		      (1- (org-element-property :post-blank elem)))))
     (if (and (memq elem-type org-appear-elements)
 	     (< (point) elem-end))	; Ignore post-element whitespace
 	elem
