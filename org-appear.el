@@ -152,8 +152,12 @@ It handles toggling elements depending on whether the cursor entered or exited t
 (defun org-appear--current-elem ()
   "Return element at point.
 Return nil if element is not supported by `org-appear-mode'."
-  (let ((elem (org-element-context)))
-    (if (memq (car elem) org-appear-elements)
+  (let* ((elem (org-element-context))
+	 (elem-type (car elem))
+	 (elem-end (- (org-element-property :end elem)
+		      (org-element-property :post-blank elem))))
+    (if (and (memq elem-type org-appear-elements)
+	     (< (point) elem-end))	; Ignore post-element whitespace
 	elem
       nil)))
 
