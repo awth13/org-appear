@@ -4,7 +4,7 @@
 ;; org-fragtog Copyright (C) 2020 Benjamin Levy - MIT/X11 License
 ;; org-appear Copyright (C) 2021 Alice Istleyeva - MIT License
 ;; Author: Alice Istleyeva <awth13@gmail.com>
-;; Version: 0.0.2
+;; Version: 0.0.3
 ;; Description: Toggle Org mode element visibility upon entering and leaving
 ;; Homepage: https://github.com/awth13/org-appear
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
