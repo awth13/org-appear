@@ -155,9 +155,11 @@ Return nil if element is not supported by `org-appear-mode'."
   (let* ((elem (org-element-context))
 	 (elem-type (car elem))
 	 (elem-end (- (org-element-property :end elem)
-		      (1- (org-element-property :post-blank elem)))))
+		      (1- (org-element-property :post-blank elem))))
+	 (elem-ignorep (string= (org-element-property :type elem) "cite")))
     (if (and (memq elem-type org-appear-elements)
-	     (< (point) elem-end))	; Ignore post-element whitespace
+	     (< (point) elem-end)     ; Ignore post-element whitespace
+	     (not elem-ignorep))      ; Ignore specific elements
 	elem
       nil)))
 
@@ -191,9 +193,7 @@ Return nil if element cannot be parsed."
 			  'script)
 			 ((eq elem-type 'entity)
 			  'entity)
-			 ;; Nothing to hide in cite links
-			 ((and (eq elem-type 'link)
-			       (not (string= link-subtype "cite")))
+			 ((eq elem-type 'link)
 			  'link)
 			 (t nil)))
 	 (elem-start (org-element-property :begin elem))
