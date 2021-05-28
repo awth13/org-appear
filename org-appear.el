@@ -152,16 +152,16 @@ It handles toggling elements depending on whether the cursor entered or exited t
 (defun org-appear--current-elem ()
   "Return element at point.
 Return nil if element is not supported by `org-appear-mode'."
-  (let* ((elem (org-element-context))
-	 (elem-type (car elem))
-	 (elem-end (- (org-element-property :end elem)
-		      (1- (org-element-property :post-blank elem))))
-	 (elem-ignorep (string= (org-element-property :type elem) "cite")))
-    (if (and (memq elem-type org-appear-elements)
-	     (< (point) elem-end)     ; Ignore post-element whitespace
-	     (not elem-ignorep))      ; Ignore specific elements
-	elem
-      nil)))
+  (when-let ((elem (org-element-context)))
+    (let ((elem-type (car elem))
+	  (elem-end (- (org-element-property :end elem)
+		       (1- (org-element-property :post-blank elem))))
+	  (elem-ignorep (string= (org-element-property :type elem) "cite")))
+      (if (and (memq elem-type org-appear-elements)
+	       (< (point) elem-end)     ; Ignore post-element whitespace
+	       (not elem-ignorep))      ; Ignore specific elements
+	  elem
+	nil))))
 
 (defun org-appear--get-parent (elem)
   "Return parent element if ELEM is nested inside another valid element."
