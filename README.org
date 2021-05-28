@@ -45,5 +45,3 @@ Automatic toggling of elements may be enabled by setting ~org-appear-autoemphasi
 #+end_example
 
 In the above example, ~org-appear~ can only detect and reveal the first (bold) element. This is due to the reliance on the ~org-element~ API -- ~org-element-context~ in particular -- which also fails to detect the second (italic) element.
-
-Since the ~org-element~ API allows any number of spaces after an element, ~org-appear~ toggles the last element on the previous line if the current line is empty.
