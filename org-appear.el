@@ -80,13 +80,15 @@ Does not have an effect if `org-link-descriptive' is nil."
   (cond
    (org-appear-mode
     (org-appear--set-elements)
-    (add-hook 'post-command-hook #'org-appear--post-cmd nil t))
+    (add-hook 'post-command-hook #'org-appear--post-cmd nil t)
+    (add-hook 'pre-command-hook #'org-appear--pre-cmd nil t))
    (t
     ;; Clean up current element when disabling the mode
     (let ((current-elem (org-appear--current-elem)))
       (when current-elem
 	(org-appear--hide-invisible current-elem)))
-    (remove-hook 'post-command-hook #'org-appear--post-cmd t))))
+    (remove-hook 'post-command-hook #'org-appear--post-cmd t)
+    (remove-hook 'pre-command-hook #'org-appear--pre-cmd t))))
 
 (defvar org-appear-elements nil
   "List of Org elements to toggle.")
@@ -148,6 +150,14 @@ It handles toggling elements depending on whether the cursor entered or exited t
       ;; from refontifying the element region after changes in buffer
       (font-lock-ensure current-elem-start current-elem-end)
       (org-appear--show-invisible current-elem))))
+
+(defun org-appear--pre-cmd ()
+  "This function is executed by `pre-command-hook' in `org-appear-mode'.
+It hides elements before commands that modify the buffer based on column width."
+  (when (memq this-command '(org-fill-paragraph
+			     org-ctrl-c-ctrl-c))
+    (when-let ((current-elem (org-appear--current-elem)))
+      (org-appear--hide-invisible current-elem))))
 
 (defun org-appear--current-elem ()
   "Return element at point.
