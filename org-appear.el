@@ -255,11 +255,11 @@ Return nil if element cannot be parsed."
        ((eq elem-type 'entity) (remove-text-properties start end '(composition)))
        ((eq elem-type 'keyword) (remove-text-properties start end '(invisible org-link)))
        (t (remove-text-properties start visible-start '(invisible org-link))
-	  (remove-text-properties visible-end end '(invisible org-link))))
+	  (remove-text-properties visible-end end '(invisible org-link)))))
     ;; To minimise distraction from moving text,
     ;; always keep parent emphasis markers visible
     (when parent
-      (org-appear--show-invisible parent)))))
+      (org-appear--show-invisible parent))))
 
 (defun org-appear--hide-invisible (elem)
   "Flush fontification of element ELEM."
