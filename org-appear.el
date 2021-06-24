@@ -70,6 +70,12 @@ Does not have an effect if `org-link-descriptive' is nil."
   :type 'boolean
   :group 'org-appear)
 
+(defcustom org-appear-autokeywords nil
+  "Non-nil enables automatic toggling of keywords.
+Does not have an effect if `org-hidden-keywords' is nil."
+  :type 'boolean
+  :group 'org-appear)
+
 ;;;###autoload
 (define-minor-mode org-appear-mode
   "A minor mode that automatically toggles elements in Org mode."
@@ -108,7 +114,8 @@ on an element.")
 	(script-elements '(subscript
 			   superscript))
 	(entity-elements '(entity))
-	(link-elements '(link)))
+	(link-elements '(link))
+	(keyword-elements '(keyword)))
 
     ;; HACK: is there a better way to do this?
     (setq-local org-appear--prev-elem nil)
@@ -120,7 +127,9 @@ on an element.")
     (when (and org-pretty-entities org-appear-autoentities)
       (setq org-appear-elements (append org-appear-elements entity-elements)))
     (when (and org-link-descriptive org-appear-autolinks)
-      (setq org-appear-elements (append org-appear-elements link-elements)))))
+      (setq org-appear-elements (append org-appear-elements link-elements)))
+    (when (and org-hidden-keywords org-appear-autokeywords)
+      (setq org-appear-elements (append org-appear-elements keyword-elements)))))
 
 (defun org-appear--post-cmd ()
   "This function is executed by `post-command-hook' in `org-appear-mode'.
@@ -205,6 +214,8 @@ Return nil if element cannot be parsed."
 			  'entity)
 			 ((eq elem-type 'link)
 			  'link)
+			 ((eq elem-type 'keyword)
+			  'keyword)
 			 (t nil)))
 	 (elem-start (org-element-property :begin elem))
 	 (elem-end (org-element-property :end elem))
@@ -240,14 +251,15 @@ Return nil if element cannot be parsed."
 	 (visible-end (plist-get elem-at-point :visible-end))
 	 (parent (plist-get elem-at-point :parent)))
     (with-silent-modifications
-      (if (eq elem-type 'entity)
-	  (remove-text-properties start end '(composition))
-	(remove-text-properties start visible-start '(invisible org-link))
-	(remove-text-properties visible-end end '(invisible org-link))))
+      (cond
+       ((eq elem-type 'entity) (remove-text-properties start end '(composition)))
+       ((eq elem-type 'keyword) (remove-text-properties start end '(invisible org-link)))
+       (t (remove-text-properties start visible-start '(invisible org-link))
+	  (remove-text-properties visible-end end '(invisible org-link))))
     ;; To minimise distraction from moving text,
     ;; always keep parent emphasis markers visible
     (when parent
-      (org-appear--show-invisible parent))))
+      (org-appear--show-invisible parent)))))
 
 (defun org-appear--hide-invisible (elem)
   "Flush fontification of element ELEM."
