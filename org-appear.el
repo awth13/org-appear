@@ -175,7 +175,10 @@ Return nil if element is not supported by `org-appear-mode'."
     (let ((elem-type (car elem))
 	  (elem-end (- (org-element-property :end elem)
 		       (1- (org-element-property :post-blank elem))))
-	  (elem-ignorep (string= (org-element-property :type elem) "cite")))
+	  (elem-ignorep (or (string= (org-element-property :type elem) "cite")
+			    (when-let ((key (org-element-property :key elem)))
+			      (not (member (downcase key)
+					   (mapcar (lambda (atom) (format "%s" atom)) org-hidden-keywords)))))))
       (if (and (memq elem-type org-appear-elements)
 	       (< (point) elem-end)     ; Ignore post-element whitespace
 	       (not elem-ignorep))      ; Ignore specific elements
