@@ -4,7 +4,7 @@
 ;; org-fragtog Copyright (C) 2020 Benjamin Levy - MIT/X11 License
 ;; org-appear Copyright (C) 2021 Alice Istleyeva - MIT License
 ;; Author: Alice Istleyeva <awth13@gmail.com>
-;; Version: 0.1.4
+;; Version: 0.2.4
 ;; Description: Toggle Org mode element visibility upon entering and leaving
 ;; Homepage: https://github.com/awth13/org-appear
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
@@ -30,12 +30,11 @@
 ;;; Commentary:
 
 ;; This package enables automatic visibility toggling of various Org elements depending on cursor position.
-;; Automatic toggling of elements may be enabled by setting `org-appear-autoemphasis',
-;; `org-appear-autolinks', and `org-appear-autosubmarkers' custom variables to non-nil.
-;; By default, only `org-appear-autoemphasis' is enabled.
-;; If Org mode custom variables that control visibility of emphasis markers, links,
-;; or sub/superscripts are configured to show hidden parts,
-;; the respective `org-appear' settings do not have an effect.
+;; It supports automatic toggling of emphasis markers, links, subscripts and
+;; superscripts, entities, and keywords. By default, toggling is instantenous
+;; and only affects emphasis markers. If Org mode custom variables that control
+;; visibility of elements are configured to show hidden parts, the respective
+;; `org-appear' settings do not have an effect.
 
 ;;; Code:
 
@@ -76,6 +75,14 @@ Does not have an effect if `org-hidden-keywords' is nil."
   :type 'boolean
   :group 'org-appear)
 
+(defcustom org-appear-delay 0.0
+  "Number of seconds of delay before toggling an element."
+  :type 'number
+  :group 'org-appear)
+
+(defvar-local org-appear--timer nil
+  "Current active timer.")
+
 ;;;###autoload
 (define-minor-mode org-appear-mode
   "A minor mode that automatically toggles elements in Org mode."
@@ -90,9 +97,11 @@ Does not have an effect if `org-hidden-keywords' is nil."
     (add-hook 'pre-command-hook #'org-appear--pre-cmd nil t))
    (t
     ;; Clean up current element when disabling the mode
-    (let ((current-elem (org-appear--current-elem)))
-      (when current-elem
-	(org-appear--hide-invisible current-elem)))
+    (when-let ((current-elem (org-appear--current-elem)))
+      (org-appear--hide-invisible current-elem)
+      (when org-appear--timer
+	(cancel-timer org-appear--timer)
+	(setq org-appear--timer nil)))
     (remove-hook 'post-command-hook #'org-appear--post-cmd t)
     (remove-hook 'pre-command-hook #'org-appear--pre-cmd t))))
 
@@ -137,28 +146,40 @@ It handles toggling elements depending on whether the cursor entered or exited t
   (let* ((prev-elem org-appear--prev-elem)
 	 (prev-elem-start (org-element-property :begin prev-elem))
 	 (current-elem (org-appear--current-elem))
-	 (current-elem-start (org-element-property :begin current-elem))
-	 (current-elem-end (org-element-property :end current-elem)))
+	 (current-elem-start (org-element-property :begin current-elem)))
 
-    ;; Hide invisible parts of previous element if cursor left it
+    ;; After leaving an element
     (when (and prev-elem
 	       (not (equal prev-elem-start current-elem-start)))
-      (save-excursion
-	(goto-char prev-elem-start)
-	;; Reevaluate `org-element-context' in case the bounds
-	;; of the previous element changed
-	(org-appear--hide-invisible (org-element-context))
-	;; Forget previous element
-	(setq org-appear--prev-elem nil)))
 
-    ;; Unhide invisible parts of current element after each command
+      ;; If timer for prev-elem fired and was expired
+      (if (not org-appear--timer)
+	  (save-excursion
+	    (goto-char prev-elem-start)
+	    ;; Reevaluate `org-element-context' in case the bounds
+	    ;; of the previous element changed
+	    (org-appear--hide-invisible (org-element-context)))
+	(cancel-timer org-appear--timer)
+	(setq org-appear--timer nil)))
+
+    ;; Inside an element
     (when current-elem
-      ;; Remember current element as the last visited element
-      (setq org-appear--prev-elem current-elem)
-      ;; Call `font-lock-ensure' before unhiding to prevent `jit-lock-mode'
-      ;; from refontifying the element region after changes in buffer
-      (font-lock-ensure current-elem-start current-elem-end)
-      (org-appear--show-invisible current-elem))))
+
+      ;; New element, delay first unhiding
+      (when (and (> org-appear-delay 0)
+		 (not (eq prev-elem-start current-elem-start)))
+	(setq org-appear--timer (run-with-idle-timer org-appear-delay
+						     nil
+						     #'org-appear--show-with-lock
+						     current-elem
+						     t)))
+
+      ;; Not a new element
+      (when (not org-appear--timer)
+	(org-appear--show-with-lock current-elem)))
+
+    ;; Remember current element as the last visited element
+    (setq org-appear--prev-elem current-elem)))
 
 (defun org-appear--pre-cmd ()
   "This function is executed by `pre-command-hook' in `org-appear-mode'.
@@ -185,24 +206,10 @@ Return nil if element is not supported by `org-appear-mode'."
 	  elem
 	nil))))
 
-(defun org-appear--get-parent (elem)
-  "Return parent element if ELEM is nested inside another valid element."
-  (let ((parent (org-element-property :parent elem)))
-    (when (memq (car parent) '(bold
-			       italic
-			       underline
-			       strike-through
-			       verbatim
-			       code
-			       subscript
-			       superscript))
-      parent)))
-
 (defun org-appear--parse-elem (elem)
-  "Return bounds of element ELEM and its parent if ELEM is nested.
+  "Return bounds of element ELEM.
 Return nil if element cannot be parsed."
   (let* ((elem-type (car elem))
-	 (link-subtype (org-element-property :type elem))
 	 (elem-tag (cond ((memq elem-type '(bold
 					    italic
 					    underline
@@ -227,8 +234,7 @@ Return nil if element cannot be parsed."
 	 ;; Some elements have extra spaces at the end
 	 ;; The number of spaces is stored in the post-blank property
 	 (post-elem-spaces (org-element-property :post-blank elem))
-	 (elem-end-real (- elem-end post-elem-spaces))
-	 (elem-parent (org-appear--get-parent elem)))
+	 (elem-end-real (- elem-end post-elem-spaces)))
     ;; Only sub/superscript elements are guaranteed to have
     ;; contents-begin and contents-end properties
     (when elem-tag
@@ -241,8 +247,7 @@ Return nil if element cannot be parsed."
 	       :visible-end ,(pcase elem-tag
 			       ('emph (1- elem-end-real))
 			       ('script elem-content-end)
-			       ('link (or elem-content-end (- elem-end-real 2))))
-	       :parent ,elem-parent))))
+			       ('link (or elem-content-end (- elem-end-real 2))))))))
 
 (defun org-appear--show-invisible (elem)
   "Silently remove invisible property from invisible parts of element ELEM."
@@ -251,31 +256,53 @@ Return nil if element cannot be parsed."
 	 (start (plist-get elem-at-point :start))
 	 (end (plist-get elem-at-point :end))
 	 (visible-start (plist-get elem-at-point :visible-start))
-	 (visible-end (plist-get elem-at-point :visible-end))
-	 (parent (plist-get elem-at-point :parent)))
+	 (visible-end (plist-get elem-at-point :visible-end)))
     (with-silent-modifications
-      (cond
-       ((eq elem-type 'entity) (remove-text-properties start end '(composition)))
-       ((eq elem-type 'keyword) (remove-text-properties start end '(invisible org-link)))
-       (t (remove-text-properties start visible-start '(invisible org-link))
-	  (remove-text-properties visible-end end '(invisible org-link)))))
-    ;; To minimise distraction from moving text,
-    ;; always keep parent emphasis markers visible
-    (when parent
-      (org-appear--show-invisible parent))))
+      (cond ((eq elem-type 'entity)
+	     (decompose-region start end))
+	    ((eq elem-type 'keyword)
+	     (remove-text-properties start end '(invisible org-link)))
+	    (t
+	     (remove-text-properties start visible-start '(invisible org-link))
+	     (remove-text-properties visible-end end '(invisible org-link)))))))
+
+(defun org-appear--show-with-lock (elem &optional renew)
+  "Show invisible parts of element ELEM.
+When RENEW is non-nil, obtain element at point instead."
+  ;; When called with timer, element might be different upon arrival
+  (when renew
+    (setq elem (org-appear--current-elem))
+    (setq org-appear--prev-elem elem)
+    (setq org-appear--timer nil))
+
+  (when-let ((elem-start (org-element-property :begin elem))
+	     (elem-end (org-element-property :end elem)))
+    ;; Call `font-lock-ensure' before unhiding to prevent `jit-lock-mode'
+    ;; from refontifying the element region after changes in buffer
+    (font-lock-ensure elem-start elem-end)
+    (org-appear--show-invisible elem)))
 
 (defun org-appear--hide-invisible (elem)
-  "Flush fontification of element ELEM."
+  "Silently add invisible property to invisible parts of element ELEM."
   (let* ((elem-at-point (org-appear--parse-elem elem))
 	 (elem-type (car elem))
 	 (start (plist-get elem-at-point :start))
-	 (end (plist-get elem-at-point :end)))
-    (font-lock-flush start end)
-    ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
-    ;; from refontifying the next element entered
-    (font-lock-ensure start end)
-    (when (eq elem-type 'entity)
-      (goto-char start))))
+	 (end (plist-get elem-at-point :end))
+	 (visible-start (plist-get elem-at-point :visible-start))
+	 (visible-end (plist-get elem-at-point :visible-end)))
+    (when elem-at-point
+      (with-silent-modifications
+	(cond ((eq elem-type 'entity)
+	       (compose-region start end (org-element-property :utf-8 elem)))
+	      ((eq elem-type 'keyword)
+	       (font-lock-flush start end))
+	      (t
+	       (put-text-property start visible-start 'invisible 'org-link)
+	       (put-text-property visible-end end 'invisible 'org-link))))
+      ;; (font-lock-flush start end)
+      ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
+      ;; from refontifying the next element entered
+      (font-lock-ensure start end))))
 
 (provide 'org-appear)
 ;;; org-appear.el ends here
