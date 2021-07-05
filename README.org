@@ -4,7 +4,7 @@ Make invisible parts of Org elements appear visible.
 
 ** About
 
-[[https://orgmode.org/][Org mode]] provides a way to toggle visibility of emphasis markers, links, subscripts, and superscripts by customising variables such as ~org-hide-emphasis-markers~. However, it is currently not possible to do this interactively and on an element-by-element basis. Emphasis and verbatim marker toggling requires reloading the Org buffer; links and sub/superscripts are always toggled in the entire buffer. This package, inspired by [[https://github.com/io12/org-fragtog][org-fragtog]], enables automatic visibility toggling depending on cursor position. Hidden element parts appear when the cursor enters an element and disappear when it leaves.
+[[https://orgmode.org/][Org mode]] provides a way to toggle visibility of hidden elements such as emphasis markers, links, etc. by customising specific variables, e.g., ~org-hide-emphasis-markers~. However, it is currently not possible to do this interactively and on an element-by-element basis. This package, inspired by [[https://github.com/io12/org-fragtog][org-fragtog]], enables automatic visibility toggling depending on cursor position. Hidden element parts appear when the cursor enters an element and disappear when it leaves.
 
 [[file:demo.gif]]
 
@@ -34,7 +34,19 @@ The package can be enabled interactively or automatically on org-mode start-up:
 
 #+end_src
 
-Automatic toggling of elements may be enabled by setting ~org-appear-autoemphasis~, ~org-appear-autolinks~, ~org-appear-autosubmarkers~, and ~org-appear-autoentities~ custom variables to non-nil. By default, only ~org-appear-autoemphasis~ is enabled. If Org mode custom variables that control visibility of emphasis markers, links, or sub/superscripts are configured to show hidden parts, the respective ~org-appear~ settings do not have an effect.
+By default, toggling is instantaneous and only emphasis markers are toggled. The following custom variables can be changed to enable additional functionality.
+
+- ~org-appear-autolinks~ :: toggle links
+- ~org-appear-autosubmarkers~ :: toggle subscripts and superscripts
+- ~org-appear-autoentities~ :: toggle Org entitites
+- ~org-appear-autokeywords~ :: toggle keywords in ~org-hidden-keywords~
+- ~org-appear-delay~ :: if greater than 0, toggle with an idle delay
+
+If Org mode custom variables that control visibility of elements are configured to show hidden parts, the respective ~org-appear~ settings do not have an effect.
+
+** Acknowledgements
+
+Special thanks to [[https://github.com/SPFabGerman][SPFabGerman]], who came up with the idea and extended ~org-appear~ beyond emphasis marker toggling, and [[https://github.com/daviwil][daviwil]], who proposed the ~org-appear~ name.
 
 ** Known Issues
 
@@ -45,3 +57,5 @@ Automatic toggling of elements may be enabled by setting ~org-appear-autoemphasi
 #+end_example
 
 In the above example, ~org-appear~ can only detect and reveal the first (bold) element. This is due to the reliance on the ~org-element~ API -- ~org-element-context~ in particular -- which also fails to detect the second (italic) element.
+
+~org-appear~ will fail to detect elements nested inside certain other elements, such as comments or document titles.
