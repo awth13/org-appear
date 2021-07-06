@@ -197,6 +197,7 @@ Return nil if element is not supported by `org-appear-mode'."
 	  (elem-end (- (org-element-property :end elem)
 		       (1- (org-element-property :post-blank elem))))
 	  (elem-ignorep (or (string= (org-element-property :type elem) "cite")
+			    (eq (org-element-property :format elem) 'plain)
 			    (when-let ((key (org-element-property :key elem)))
 			      (not (memq (intern (downcase key))
 					 org-hidden-keywords))))))
