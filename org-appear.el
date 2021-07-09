@@ -193,17 +193,22 @@ It hides elements before commands that modify the buffer based on column width."
   "Return element at point.
 Return nil if element is not supported by `org-appear-mode'."
   (when-let ((elem (org-element-context)))
-    (let ((elem-type (car elem))
-	  (elem-end (- (org-element-property :end elem)
-		       (1- (org-element-property :post-blank elem))))
-	  (elem-ignorep (or (string= (org-element-property :type elem) "cite")
-			    (eq (org-element-property :format elem) 'plain)
-			    (when-let ((key (org-element-property :key elem)))
-			      (not (memq (intern (downcase key))
-					 org-hidden-keywords))))))
+    (let* ((elem-type (car elem))
+	   (elem-end (- (org-element-property :end elem)
+			(1- (org-element-property :post-blank elem))))
+	   (link-ignore-p (and (eq elem-type 'link)
+			       (or (string-match-p "[Cc]ite"
+						   (org-element-property :type elem))
+				   (eq 'plain
+				       (org-element-property :format elem)))))
+	   (key-ignore-p (and (eq elem-type 'keyword)
+			      (not (memq (intern (downcase
+						  (org-element-property :key elem)))
+					 org-hidden-keywords)))))
       (if (and (memq elem-type org-appear-elements)
 	       (< (point) elem-end)     ; Ignore post-element whitespace
-	       (not elem-ignorep))      ; Ignore specific elements
+	       (not link-ignore-p)	; Ignore plain and org-ref links
+	       (not key-ignore-p))	; Ignore unhidden keywords
 	  elem
 	nil))))
 
