@@ -40,6 +40,7 @@
 
 (require 'org)
 (require 'org-element)
+(require 'subr-x)			; Compatibility
 
 (defgroup org-appear nil
   "Auto-toggle Org elements"
