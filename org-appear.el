@@ -111,7 +111,7 @@ Does not have an effect if `org-hidden-keywords' is nil."
 
 (defvar-local org-appear--prev-elem nil
   "Previous element that surrounded the cursor.
- nil if the cursor was not on an element.")
+nil if the cursor was not on an element.")
 
 (defun org-appear--set-elements ()
   "Add elements to toggle to `org-appear-elements'."
