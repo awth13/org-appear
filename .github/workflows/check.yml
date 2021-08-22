@@ -1,0 +1,27 @@
+name: check
+on: [push, pull_request]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        emacs-version:
+          - 27.1
+          - 27.2
+          - snapshot
+        elisp-check:
+          - melpa
+          - load-file
+          - byte-compile
+          - checkdoc
+          - package-lint
+    steps:
+    - uses: actions/checkout@v2
+    - uses: purcell/setup-emacs@master
+      with:
+        version: ${{ matrix.emacs-version }}
+    - uses: leotaku/elisp-check@master
+      with:
+        check: ${{ matrix.elisp-check }}
+        file: org-appear.el
