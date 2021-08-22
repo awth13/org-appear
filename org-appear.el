@@ -31,8 +31,8 @@
 
 ;; This package enables automatic visibility toggling of various Org elements depending on cursor position.
 ;; It supports automatic toggling of emphasis markers, links, subscripts and
-;; superscripts, entities, and keywords. By default, toggling is instantaneous
-;; and only affects emphasis markers. If Org mode custom variables that control
+;; superscripts, entities, and keywords.  By default, toggling is instantaneous
+;; and only affects emphasis markers.  If Org mode custom variables that control
 ;; visibility of elements are configured to show hidden parts, the respective
 ;; `org-appear' settings do not have an effect.
 
@@ -43,7 +43,7 @@
 (require 'subr-x)			; Compatibility
 
 (defgroup org-appear nil
-  "Auto-toggle Org elements"
+  "Auto-toggle Org elements."
   :group 'org)
 
 (defcustom org-appear-autoemphasis t
@@ -77,7 +77,7 @@ Does not have an effect if `org-hidden-keywords' is nil."
   :group 'org-appear)
 
 (defcustom org-appear-delay 0.0
-  "Number of seconds of delay before toggling an element."
+  "Seconds of delay before toggling an element."
   :type 'number
   :group 'org-appear)
 
@@ -110,8 +110,8 @@ Does not have an effect if `org-hidden-keywords' is nil."
   "List of Org elements to toggle.")
 
 (defvar-local org-appear--prev-elem nil
-  "Previous element that surrounded the cursor or nil if the cursor was not
-on an element.")
+  "Previous element that surrounded the cursor.
+ nil if the cursor was not on an element.")
 
 (defun org-appear--set-elements ()
   "Add elements to toggle to `org-appear-elements'."
