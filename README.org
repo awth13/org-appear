@@ -1,3 +1,6 @@
+[[https://melpa.org/#/org-appear][file:https://melpa.org/packages/org-appear-badge.svg]]
+[[https://github.com/awth13/org-appear/actions/workflows/check.yml][file:https://github.com/awth13/org-appear/actions/workflows/check.yml/badge.svg?branch=master]]
+
 * ~org-appear~
 
 Make invisible parts of Org elements appear visible.
@@ -36,11 +39,11 @@ The package can be enabled interactively or automatically on org-mode start-up:
 
 By default, toggling is instantaneous and only emphasis markers are toggled. The following custom variables can be changed to enable additional functionality.
 
-- ~org-appear-autolinks~ :: toggle links
-- ~org-appear-autosubmarkers~ :: toggle subscripts and superscripts
-- ~org-appear-autoentities~ :: toggle Org entitites
-- ~org-appear-autokeywords~ :: toggle keywords in ~org-hidden-keywords~
-- ~org-appear-delay~ :: if greater than 0, toggle with an idle delay
+- org-appear-autolinks :: if non-nil, toggle links
+- org-appear-autosubmarkers :: if non-nil, toggle subscripts and superscripts
+- org-appear-autoentities :: if non-nil, toggle Org entitites
+- org-appear-autokeywords :: if non-nil, toggle keywords in ~org-hidden-keywords~
+- org-appear-delay :: seconds of delay before toggling
 
 If Org mode custom variables that control visibility of elements are configured to show hidden parts, the respective ~org-appear~ settings do not have an effect.
 
