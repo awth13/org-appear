@@ -37,7 +37,7 @@ The package can be enabled interactively or automatically on org-mode start-up:
 
 #+end_src
 
-** Customisation
+** Customization
 
 By default, toggling is instantaneous and only emphasis markers are toggled. The following custom variables can be changed to enable/disable functionality.
 
