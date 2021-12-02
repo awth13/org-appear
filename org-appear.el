@@ -205,11 +205,16 @@ Return nil if element is not supported by `org-appear-mode'."
 	   (key-ignore-p (and (eq elem-type 'keyword)
 			      (not (memq (intern (downcase
 						  (org-element-property :key elem)))
-					 org-hidden-keywords)))))
+					 org-hidden-keywords))))
+	   (script-ignore-p (and (or (eq elem-type 'subscript)
+				     (eq elem-type 'superscript))
+				 (not (org-element-property :use-brackets-p elem))
+				 (not (eq org-use-sub-superscripts t)))))
       (if (and (memq elem-type org-appear-elements)
 	       (< (point) elem-end)     ; Ignore post-element whitespace
 	       (not link-ignore-p)	; Ignore plain and org-ref links
-	       (not key-ignore-p))	; Ignore unhidden keywords
+	       (not key-ignore-p)	; Ignore unhidden keywords
+	       (not script-ignore-p))	; Ignore sub/supercripts ignored by Org
 	  elem
 	nil))))
 
