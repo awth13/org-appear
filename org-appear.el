@@ -84,6 +84,14 @@ Does not have an effect if `org-hidden-keywords' is nil."
 (defvar-local org-appear--timer nil
   "Current active timer.")
 
+(defcustom org-appear-only-on-change nil
+  "If non-nil only show markers, when the buffer is modified or mouse is clicked inside of an element."
+  :type 'boolean
+  :group 'org-appear)
+
+(defvar-local org-appear--buffer-modified nil
+  "Non-nil if buffer has been modified.")
+
 ;;;###autoload
 (define-minor-mode org-appear-mode
   "A minor mode that automatically toggles elements in Org mode."
@@ -95,6 +103,8 @@ Does not have an effect if `org-hidden-keywords' is nil."
    (org-appear-mode
     (org-appear--set-elements)
     (add-hook 'post-command-hook #'org-appear--post-cmd nil t)
+    (add-hook 'after-change-functions #'org-appear--after-change nil t)
+    (add-hook 'mouse-leave-buffer-hook #'org-appear--after-change nil t)
     (add-hook 'pre-command-hook #'org-appear--pre-cmd nil t))
    (t
     ;; Clean up current element when disabling the mode
@@ -104,6 +114,8 @@ Does not have an effect if `org-hidden-keywords' is nil."
 	(cancel-timer org-appear--timer)
 	(setq org-appear--timer nil)))
     (remove-hook 'post-command-hook #'org-appear--post-cmd t)
+    (remove-hook 'after-change-functions #'org-appear--after-change t)
+    (remove-hook 'mouse-leave-buffer-hook #'org-appear--after-change t)
     (remove-hook 'pre-command-hook #'org-appear--pre-cmd t))))
 
 (defvar org-appear-elements nil
@@ -164,7 +176,7 @@ It handles toggling elements depending on whether the cursor entered or exited t
 	(setq org-appear--timer nil)))
 
     ;; Inside an element
-    (when current-elem
+    (when (and current-elem (or (not org-appear-only-on-change) org-appear--buffer-modified))
 
       ;; New element, delay first unhiding
       (when (and (> org-appear-delay 0)
@@ -180,7 +192,13 @@ It handles toggling elements depending on whether the cursor entered or exited t
 	(org-appear--show-with-lock current-elem)))
 
     ;; Remember current element as the last visited element
-    (setq org-appear--prev-elem current-elem)))
+    (setq org-appear--prev-elem current-elem)
+    (setq org-appear--buffer-modified nil)))
+
+(defun org-appear--after-change (&rest r)
+  "This function is executed by `after-change-functions' in `org-appear-mode'.
+It marks the buffer as modified."
+  (setq org-appear--buffer-modified 't))
 
 (defun org-appear--pre-cmd ()
   "This function is executed by `pre-command-hook' in `org-appear-mode'.
