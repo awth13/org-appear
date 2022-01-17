@@ -131,6 +131,9 @@ nil if the cursor was not on an element.")
 (defvar-local org-appear--buffer-modified nil
   "Non-nil if buffer has been modified.")
 
+(defvar-local org-appear--elem-modified nil
+  "Non-nil if the last encountered element has been toggled.")
+
 (defun org-appear--set-elements ()
   "Add elements to toggle to `org-appear-elements'."
   (let ((emphasis-elements '(bold
@@ -169,7 +172,9 @@ It handles toggling elements depending on whether the cursor entered or exited t
 
     ;; After leaving an element
     (when (and prev-elem
+	       org-appear--elem-modified
 	       (not (equal prev-elem-start current-elem-start)))
+      (setq org-appear--elem-modified nil)
 
       ;; If timer for prev-elem fired and was expired
       (if (not org-appear--timer)
@@ -183,7 +188,9 @@ It handles toggling elements depending on whether the cursor entered or exited t
 
     ;; Inside an element
     (when (and current-elem (or (eq org-appear-trigger 'always)
-				org-appear--buffer-modified))
+				org-appear--buffer-modified
+				org-appear--elem-modified))
+      (setq org-appear--elem-modified t)
 
       ;; New element, delay first unhiding
       (when (and (eq org-appear-trigger 'always)
