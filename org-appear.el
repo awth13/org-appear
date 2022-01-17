@@ -46,6 +46,15 @@
   "Auto-toggle Org elements."
   :group 'org)
 
+(defcustom org-appear-trigger 'always
+  "Method of triggering element toggling.
+`always' means that elements are toggled every time they are under the cursor.
+`on-change' means that elements are toggled only when the buffer is modified
+or when the element under the cursor is clicked with a mouse."
+  :type '(choice (const :tag "Always" always)
+		 (const :tag "Only on change" on-change))
+  :group 'org-appear)
+
 (defcustom org-appear-autoemphasis t
   "Non-nil enables automatic toggling of emphasised and verbatim markers.
 Does not have an effect if `org-hide-emphasis-markers' is nil."
@@ -84,14 +93,6 @@ Does not have an effect if `org-hidden-keywords' is nil."
 (defvar-local org-appear--timer nil
   "Current active timer.")
 
-(defcustom org-appear-only-on-change nil
-  "If non-nil only show markers, when the buffer is modified or mouse is clicked inside of an element."
-  :type 'boolean
-  :group 'org-appear)
-
-(defvar-local org-appear--buffer-modified nil
-  "Non-nil if buffer has been modified.")
-
 ;;;###autoload
 (define-minor-mode org-appear-mode
   "A minor mode that automatically toggles elements in Org mode."
@@ -103,9 +104,10 @@ Does not have an effect if `org-hidden-keywords' is nil."
    (org-appear-mode
     (org-appear--set-elements)
     (add-hook 'post-command-hook #'org-appear--post-cmd nil t)
-    (add-hook 'after-change-functions #'org-appear--after-change nil t)
-    (add-hook 'mouse-leave-buffer-hook #'org-appear--after-change nil t)
-    (add-hook 'pre-command-hook #'org-appear--pre-cmd nil t))
+    (add-hook 'pre-command-hook #'org-appear--pre-cmd nil t)
+    (when (eq org-appear-trigger 'on-change)
+      (add-hook 'mouse-leave-buffer-hook #'org-appear--after-change nil t)
+      (add-hook 'after-change-functions #'org-appear--after-change nil t)))
    (t
     ;; Clean up current element when disabling the mode
     (when-let ((current-elem (org-appear--current-elem)))
@@ -114,9 +116,10 @@ Does not have an effect if `org-hidden-keywords' is nil."
 	(cancel-timer org-appear--timer)
 	(setq org-appear--timer nil)))
     (remove-hook 'post-command-hook #'org-appear--post-cmd t)
-    (remove-hook 'after-change-functions #'org-appear--after-change t)
-    (remove-hook 'mouse-leave-buffer-hook #'org-appear--after-change t)
-    (remove-hook 'pre-command-hook #'org-appear--pre-cmd t))))
+    (remove-hook 'pre-command-hook #'org-appear--pre-cmd t)
+    (when (eq org-appear-trigger 'on-change)
+      (remove-hook 'mouse-leave-buffer-hook #'org-appear--after-change t)
+      (remove-hook 'after-change-functions #'org-appear--after-change t)))))
 
 (defvar org-appear-elements nil
   "List of Org elements to toggle.")
@@ -124,6 +127,12 @@ Does not have an effect if `org-hidden-keywords' is nil."
 (defvar-local org-appear--prev-elem nil
   "Previous element that surrounded the cursor.
 nil if the cursor was not on an element.")
+
+(defvar-local org-appear--buffer-modified nil
+  "Non-nil if buffer has been modified.")
+
+(defvar-local org-appear--elem-modified nil
+  "Non-nil if the last encountered element has been toggled.")
 
 (defun org-appear--set-elements ()
   "Add elements to toggle to `org-appear-elements'."
@@ -163,7 +172,11 @@ It handles toggling elements depending on whether the cursor entered or exited t
 
     ;; After leaving an element
     (when (and prev-elem
+	       org-appear--elem-modified
 	       (not (equal prev-elem-start current-elem-start)))
+
+      ;; Forget element
+      (setq org-appear--elem-modified nil)
 
       ;; If timer for prev-elem fired and was expired
       (if (not org-appear--timer)
@@ -176,10 +189,16 @@ It handles toggling elements depending on whether the cursor entered or exited t
 	(setq org-appear--timer nil)))
 
     ;; Inside an element
-    (when (and current-elem (or (not org-appear-only-on-change) org-appear--buffer-modified))
+    (when (and current-elem (or (eq org-appear-trigger 'always)
+				org-appear--buffer-modified
+				org-appear--elem-modified))
+
+      ;; Mark element as modified to toggle ignoring buffer state
+      (setq org-appear--elem-modified t)
 
       ;; New element, delay first unhiding
-      (when (and (> org-appear-delay 0)
+      (when (and (eq org-appear-trigger 'always)
+		 (> org-appear-delay 0)
 		 (not (eq prev-elem-start current-elem-start)))
 	(setq org-appear--timer (run-with-idle-timer org-appear-delay
 						     nil
@@ -191,11 +210,10 @@ It handles toggling elements depending on whether the cursor entered or exited t
       (when (not org-appear--timer)
 	(org-appear--show-with-lock current-elem)))
 
-    ;; Remember current element as the last visited element
     (setq org-appear--prev-elem current-elem)
     (setq org-appear--buffer-modified nil)))
 
-(defun org-appear--after-change (&rest r)
+(defun org-appear--after-change (&rest _args)
   "This function is executed by `after-change-functions' in `org-appear-mode'.
 It marks the buffer as modified."
   (setq org-appear--buffer-modified 't))
