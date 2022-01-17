@@ -210,7 +210,7 @@ It handles toggling elements depending on whether the cursor entered or exited t
     (setq org-appear--prev-elem current-elem)
     (setq org-appear--buffer-modified nil)))
 
-(defun org-appear--after-change (&rest r)
+(defun org-appear--after-change (&rest _args)
   "This function is executed by `after-change-functions' in `org-appear-mode'.
 It marks the buffer as modified."
   (setq org-appear--buffer-modified 't))
