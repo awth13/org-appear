@@ -174,6 +174,8 @@ It handles toggling elements depending on whether the cursor entered or exited t
     (when (and prev-elem
 	       org-appear--elem-modified
 	       (not (equal prev-elem-start current-elem-start)))
+
+      ;; Forget element
       (setq org-appear--elem-modified nil)
 
       ;; If timer for prev-elem fired and was expired
@@ -190,6 +192,8 @@ It handles toggling elements depending on whether the cursor entered or exited t
     (when (and current-elem (or (eq org-appear-trigger 'always)
 				org-appear--buffer-modified
 				org-appear--elem-modified))
+
+      ;; Mark element as modified to toggle ignoring buffer state
       (setq org-appear--elem-modified t)
 
       ;; New element, delay first unhiding
@@ -206,7 +210,6 @@ It handles toggling elements depending on whether the cursor entered or exited t
       (when (not org-appear--timer)
 	(org-appear--show-with-lock current-elem)))
 
-    ;; Remember current element as the last visited element
     (setq org-appear--prev-elem current-elem)
     (setq org-appear--buffer-modified nil)))
 
