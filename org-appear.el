@@ -323,13 +323,14 @@ When RENEW is non-nil, obtain element at point instead."
     (when elem-at-point
       (with-silent-modifications
 	(cond ((eq elem-type 'entity)
-	       (compose-region start end (org-element-property :utf-8 elem)))
+	       (compose-region start end (org-element-property :utf-8 elem))
+	       (font-lock-flush start end))
 	      ((eq elem-type 'keyword)
 	       (font-lock-flush start end))
 	      (t
 	       (put-text-property start visible-start 'invisible 'org-link)
-	       (put-text-property visible-end end 'invisible 'org-link))))
-      ;; (font-lock-flush start end)
+	       (put-text-property visible-end end 'invisible 'org-link)
+	       (font-lock-flush start end))))
       ;; Call `font-lock-ensure' after flushing to prevent `jit-lock-mode'
       ;; from refontifying the next element entered
       (font-lock-ensure start end))))
