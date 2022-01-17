@@ -44,6 +44,9 @@ By default, toggling is instantaneous and only emphasis markers are toggled. The
 - org-appear-autoentities :: if non-nil, toggle Org entitites
 - org-appear-autokeywords :: if non-nil, toggle keywords in ~org-hidden-keywords~
 - org-appear-delay :: seconds of delay before toggling
+- org-appear-trigger :: when to toggle elements
+
+~org-appear-trigger~ can be set to either ~always~ or ~on-change~. With ~on-change~, elements will be toggled only when the buffer is modified or on mouse click. This option disables delayed toggling.
 
 If Org mode custom variables that control visibility of elements are configured to show hidden parts, the respective ~org-appear~ settings do not have an effect.
 
