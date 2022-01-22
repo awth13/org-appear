@@ -229,9 +229,9 @@ It marks the buffer as modified."
 (defun org-appear-manual-stop ()
   "Signal that elements must no longer be toggled."
   (when-let ((current-elem (org-appear--current-elem)))
-    (org-appear--hide-invisible current-elem)
-    (setq org-appear--buffer-modified nil)
-    (setq org-appear--elem-modified nil)))
+    (org-appear--hide-invisible current-elem))
+  (setq org-appear--buffer-modified nil)
+  (setq org-appear--elem-modified nil))
 
 (defun org-appear--pre-cmd ()
   "This function is executed by `pre-command-hook' in `org-appear-mode'.
