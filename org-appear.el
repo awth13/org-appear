@@ -50,9 +50,12 @@
   "Method of triggering element toggling.
 `always' means that elements are toggled every time they are under the cursor.
 `on-change' means that elements are toggled only when the buffer is modified
-or when the element under the cursor is clicked with a mouse."
+or when the element under the cursor is clicked with a mouse.
+`manual' means that toggling starts on call to `org-appear-manual-start'
+and stops on call to `org-appear-manual-stop'."
   :type '(choice (const :tag "Always" always)
-		 (const :tag "Only on change" on-change))
+		 (const :tag "Only on change" on-change)
+		 (const :tag "Manual" manual))
   :group 'org-appear)
 
 (defcustom org-appear-autoemphasis t
@@ -211,12 +214,24 @@ It handles toggling elements depending on whether the cursor entered or exited t
 	(org-appear--show-with-lock current-elem)))
 
     (setq org-appear--prev-elem current-elem)
-    (setq org-appear--buffer-modified nil)))
+    (when (not (eq org-appear-trigger 'manual))
+      (setq org-appear--buffer-modified nil))))
 
 (defun org-appear--after-change (&rest _args)
   "This function is executed by `after-change-functions' in `org-appear-mode'.
 It marks the buffer as modified."
   (setq org-appear--buffer-modified 't))
+
+(defun org-appear-manual-start ()
+  "Signal that elements must be toggled."
+  (setq org-appear--buffer-modified 't))
+
+(defun org-appear-manual-stop ()
+  "Signal that elements must no longer be toggled."
+  (when-let ((current-elem (org-appear--current-elem)))
+    (org-appear--hide-invisible current-elem)
+    (setq org-appear--buffer-modified nil)
+    (setq org-appear--elem-modified nil)))
 
 (defun org-appear--pre-cmd ()
   "This function is executed by `pre-command-hook' in `org-appear-mode'.
