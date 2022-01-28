@@ -227,12 +227,8 @@ It signals that elements in the current buffer must be toggled."
   (setq org-appear--do-buffer 't))
 
 (defun org-appear-manual-stop ()
-  "Signal that elements in the current buffer must no longer be toggled.
-Cleanup current element, if any."
-  (when-let ((current-elem (org-appear--current-elem)))
-    (org-appear--hide-invisible current-elem))
-  (setq org-appear--do-buffer nil)
-  (setq org-appear--elem-toggled nil))
+  "Signal that elements in the current buffer must no longer be toggled."
+  (setq org-appear--do-buffer nil))
 
 (defun org-appear--pre-cmd ()
   "This function is executed by `pre-command-hook' in `org-appear-mode'.
