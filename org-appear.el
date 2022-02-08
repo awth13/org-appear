@@ -93,6 +93,12 @@ Does not have an effect if `org-hidden-keywords' is nil."
   :type 'number
   :group 'org-appear)
 
+(defcustom org-appear-manual-linger nil
+  "Whether to hide the element on manual stop.
+If true, hide upon navigating away."
+  :type 'boolean
+  :group 'org-appear)
+
 (defvar-local org-appear--timer nil
   "Current active timer.")
 
@@ -228,6 +234,10 @@ It signals that elements in the current buffer must be toggled."
 
 (defun org-appear-manual-stop ()
   "Signal that elements in the current buffer must no longer be toggled."
+  (when (not org-appear-manual-linger)
+    (when-let ((current-elem (org-appear--current-elem)))
+      (org-appear--hide-invisible current-elem))
+    (setq org-appear--elem-toggled nil))
   (setq org-appear--do-buffer nil))
 
 (defun org-appear--pre-cmd ()
