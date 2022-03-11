@@ -332,6 +332,15 @@ Return nil if element cannot be parsed."
 	     (decompose-region start end))
 	    ((eq elem-type 'keyword)
 	     (remove-text-properties start end '(invisible org-link)))
+            ((and (eq elem-type 'link)
+                  (eq org-appear-autolinks 'just-brackets)
+                  (< start visible-start visible-end end))
+             (remove-text-properties visible-end
+                                     (1+ visible-end)
+                                     '(invisible org-link))
+             (remove-text-properties (1- visible-start)
+                                     visible-start
+                                     '(invisible org-link)))
 	    (t
 	     (remove-text-properties start visible-start '(invisible org-link))
 	     (remove-text-properties visible-end end '(invisible org-link)))))))
