@@ -77,7 +77,9 @@ Does not have an effect if `org-pretty-entities' is nil."
   :group 'org-appear)
 
 (defcustom org-appear-autolinks nil
-  "Non-nil enables automatic toggling of links.
+  "Non-nil enables automatic toggling of links.  If set to
+the symbol `just-brackets', links will be shown with brackets
+around them without showing the link target.
 Does not have an effect if `org-link-descriptive' is nil."
   :type 'boolean
   :group 'org-appear)
