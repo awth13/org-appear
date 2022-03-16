@@ -335,7 +335,8 @@ Return nil if element cannot be parsed."
       (cond ((eq elem-type 'entity)
 	     (decompose-region start end))
 	    ((eq elem-type 'latex-fragment)
-	     (remove-text-properties start end '(invisible composition)))
+	     (remove-text-properties start end '(invisible composition))
+	     (decompose-region start end))
 	    ((eq elem-type 'keyword)
 	     (remove-text-properties start end '(invisible org-link)))
 	    (t
@@ -372,6 +373,8 @@ When RENEW is non-nil, obtain element at point instead."
 	       (compose-region start end (org-element-property :utf-8 elem))
 	       (font-lock-flush start end))
 	      ((eq elem-type 'keyword)
+	       (font-lock-flush start end))
+	      ((eq elem-type 'latex-fragment)
 	       (font-lock-flush start end))
 	      (t
 	       (put-text-property start visible-start 'invisible 'org-link)
