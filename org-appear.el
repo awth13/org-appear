@@ -88,8 +88,9 @@ Does not have an effect if `org-hidden-keywords' is nil."
   :type 'boolean
   :group 'org-appear)
 
-(defcustom org-appear-clearlatex nil
-  "Non-nil enables automatic cleaning of Latex inline math blocks."
+(defcustom org-appear-inside-latex nil
+  "Also applies toggling of subscripts and superscripts (if `org-appear-autosubmarkers' is non-nil)
+and toggling of entities (if `org-appear-autoentities' is non-nil) inside Latex fragments."
   :type 'boolean
   :group 'org-appear)
 
@@ -170,7 +171,7 @@ nil if the cursor was not on an element.")
       (setq org-appear-elements (append org-appear-elements link-elements)))
     (when (and org-hidden-keywords org-appear-autokeywords)
       (setq org-appear-elements (append org-appear-elements keyword-elements)))
-    (when org-appear-clearlatex
+    (when org-appear-inside-latex
       (setq org-appear-elements (append org-appear-elements latex-elements)))))
 
 (defun org-appear--post-cmd ()
@@ -335,8 +336,10 @@ Return nil if element cannot be parsed."
       (cond ((eq elem-type 'entity)
 	     (decompose-region start end))
 	    ((eq elem-type 'latex-fragment)
-	     (remove-text-properties start end '(invisible composition))
-	     (decompose-region start end))
+	     (when org-appear-autosubmarkers
+	       (remove-text-properties start end '(invisible)))
+	     (when org-appear-autoentities
+	       (decompose-region start end)))
 	    ((eq elem-type 'keyword)
 	     (remove-text-properties start end '(invisible org-link)))
 	    (t
@@ -372,9 +375,7 @@ When RENEW is non-nil, obtain element at point instead."
 	(cond ((eq elem-type 'entity)
 	       (compose-region start end (org-element-property :utf-8 elem))
 	       (font-lock-flush start end))
-	      ((eq elem-type 'keyword)
-	       (font-lock-flush start end))
-	      ((eq elem-type 'latex-fragment)
+	      ((memq elem-type '(keyword latex-fragment))
 	       (font-lock-flush start end))
 	      (t
 	       (put-text-property start visible-start 'invisible 'org-link)

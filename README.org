@@ -43,6 +43,7 @@ By default, toggling is instantaneous and only emphasis markers are toggled. The
 - org-appear-autosubmarkers :: if non-nil, toggle subscripts and superscripts
 - org-appear-autoentities :: if non-nil, toggle Org entitites
 - org-appear-autokeywords :: if non-nil, toggle keywords in ~org-hidden-keywords~
+- org-appear-inside-latex :: if non-nil, also toggle entities and subscripts / superscripts in Latex fragments
 - org-appear-delay :: seconds of delay before toggling
 - org-appear-trigger :: when to toggle elements
 
