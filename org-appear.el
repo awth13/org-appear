@@ -89,8 +89,9 @@ Does not have an effect if `org-hidden-keywords' is nil."
   :group 'org-appear)
 
 (defcustom org-appear-inside-latex nil
-  "Also applies toggling of subscripts and superscripts (if `org-appear-autosubmarkers' is non-nil)
-and toggling of entities (if `org-appear-autoentities' is non-nil) inside Latex fragments."
+  "Also applies toggling of subscripts and superscripts (if
+`org-appear-autosubmarkers' is non-nil) and toggling of entities (if
+`org-appear-autoentities' is non-nil) inside Latex fragments and environments."
   :type 'boolean
   :group 'org-appear)
 
@@ -156,7 +157,7 @@ nil if the cursor was not on an element.")
 	(entity-elements '(entity))
 	(link-elements '(link))
 	(keyword-elements '(keyword))
-	(latex-elements '(latex-fragment)))
+	(latex-elements '(latex-fragment latex-environment)))
 
     ;; HACK: is there a better way to do this?
     (setq-local org-appear--prev-elem nil)
@@ -299,7 +300,7 @@ Return nil if element cannot be parsed."
 			  'link)
 			 ((eq elem-type 'keyword)
 			  'keyword)
-			 ((eq elem-type 'latex-fragment)
+			 ((memq elem-type '(latex-fragment latex-environment))
 			  'latex-fragment)
 			 (t nil)))
 	 (elem-start (org-element-property :begin elem))
@@ -335,7 +336,7 @@ Return nil if element cannot be parsed."
     (with-silent-modifications
       (cond ((eq elem-type 'entity)
 	     (decompose-region start end))
-	    ((eq elem-type 'latex-fragment)
+	    ((memq elem-type '(latex-fragment latex-environment))
 	     (when org-appear-autosubmarkers
 	       (remove-text-properties start end '(invisible)))
 	     (when org-appear-autoentities
@@ -375,7 +376,7 @@ When RENEW is non-nil, obtain element at point instead."
 	(cond ((eq elem-type 'entity)
 	       (compose-region start end (org-element-property :utf-8 elem))
 	       (font-lock-flush start end))
-	      ((memq elem-type '(keyword latex-fragment))
+	      ((memq elem-type '(keyword latex-fragment latex-environment))
 	       (font-lock-flush start end))
 	      (t
 	       (put-text-property start visible-start 'invisible 'org-link)
