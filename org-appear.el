@@ -89,9 +89,9 @@ Does not have an effect if `org-hidden-keywords' is nil."
   :group 'org-appear)
 
 (defcustom org-appear-inside-latex nil
-  "Also applies toggling of subscripts and superscripts (if
-`org-appear-autosubmarkers' is non-nil) and toggling of entities (if
-`org-appear-autoentities' is non-nil) inside Latex fragments and environments."
+  "Also applies toggling inside Latex fragments and environments.
+Sub- and superscript markers are toggled if `org-appear-autosubmarkers' is
+non-nil.  Entities are toggled if `org-appear-autoentities' is non-nil."
   :type 'boolean
   :group 'org-appear)
 
