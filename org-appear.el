@@ -78,8 +78,12 @@ Does not have an effect if `org-pretty-entities' is nil."
 
 (defcustom org-appear-autolinks nil
   "Non-nil enables automatic toggling of links.
-Does not have an effect if `org-link-descriptive' is nil."
-  :type 'boolean
+If set to the symbol `just-brackets', links will be shown with
+brackets around them without showing the link target.  Does not
+have an effect if `org-link-descriptive' is nil."
+  :type '(choice (const :tag "Ignore links" nil)
+		 (const :tag "Toggle full link" t)
+		 (const :tag "Toggle brackets" just-brackets))
   :group 'org-appear)
 
 (defcustom org-appear-autokeywords nil
@@ -349,6 +353,14 @@ Return nil if element cannot be parsed."
 	       (decompose-region start end)))
 	    ((eq elem-type 'keyword)
 	     (remove-text-properties start end '(invisible org-link)))
+	    ((and (eq elem-type 'link)
+		  (eq org-appear-autolinks 'just-brackets))
+	     (remove-text-properties visible-end
+				     (1+ visible-end)
+				     '(invisible org-link))
+	     (remove-text-properties (1- visible-start)
+				     visible-start
+				     '(invisible org-link)))
 	    (t
 	     (remove-text-properties start visible-start '(invisible org-link))
 	     (remove-text-properties visible-end end '(invisible org-link)))))))
