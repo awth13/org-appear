@@ -81,7 +81,9 @@ Does not have an effect if `org-pretty-entities' is nil."
 If set to the symbol `just-brackets', links will be shown with
 brackets around them without showing the link target.  Does not
 have an effect if `org-link-descriptive' is nil."
-  :type '(choice boolean (const just-brackets))
+  :type '(choice (const :tag "Ignore links" nil)
+		 (const :tag "Toggle full link" t)
+		 (const :tag "Toggle brackets" just-brackets))
   :group 'org-appear)
 
 (defcustom org-appear-autokeywords nil
