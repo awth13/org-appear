@@ -29,7 +29,7 @@ Alternatively, git clone this repository and point Emacs to it using the ~:load-
 
 ** Usage
 
-The package can be enabled interactively or automatically on org-mode start-up:
+The package can be enabled interactively or automatically on Org mode start-up:
 
 #+begin_src emacs-lisp
 
@@ -43,7 +43,7 @@ By default, toggling is instantaneous and only emphasis markers are toggled. The
 - org-appear-autosubmarkers :: if non-nil, toggle subscripts and superscripts
 - org-appear-autoentities :: if non-nil, toggle Org entitites
 - org-appear-autokeywords :: if non-nil, toggle keywords in ~org-hidden-keywords~
-- org-appear-inside-latex :: if non-nil, also toggle entities and subscripts / superscripts in Latex fragments
+- org-appear-inside-latex :: if non-nil, toggle entities and sub/superscripts in LaTeX fragments
 - org-appear-delay :: seconds of delay before toggling
 - org-appear-trigger :: when to toggle elements
 
@@ -51,13 +51,20 @@ If Org mode custom variables that control visibility of elements are configured 
 
 ~org-appear-trigger~ can be set to ~always~, ~on-change~, or ~manual~. With ~on-change~, elements will be toggled only when the buffer is modified or on mouse click. This option disables delayed toggling. With ~manual~, toggling must be enabled by calling ~org-appear-manual-start~. ~org-appear-manual-stop~ is used to disable toggling with this option.
 
-The ~manual~ option is useful for, e.g., integrating ~org-appear~ with ~evil-mode~. Below is an example configuration for toggling elements in Insert mode only.
+The ~manual~ option is useful for, e.g., integrating ~org-appear~ with ~evil-mode~. Below is an example configuration for toggling elements in Insert mode only. Note that ~org-appear~ expects to be enabled in Org mode buffers only, which is why the example attaches ~evil-mode~ hooks to the Org mode startup hook.
 
 #+begin_src emacs-lisp
 
   (setq org-appear-trigger 'manual)
-  (add-hook 'evil-insert-state-entry-hook #'org-appear-manual-start nil t)
-  (add-hook 'evil-insert-state-exit-hook #'org-appear-manual-stop nil t)
+  (add-hook 'org-mode-hook (lambda ()
+                             (add-hook 'evil-insert-state-entry-hook
+                                       #'org-appear-manual-start
+                                       nil
+                                       t)
+                             (add-hook 'evil-insert-state-exit-hook
+                                       #'org-appear-manual-stop
+                                       nil
+                                       t)))
 
 #+end_src
 
