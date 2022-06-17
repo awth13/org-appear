@@ -343,6 +343,10 @@ Return nil if element cannot be parsed."
 	 (end (plist-get elem-at-point :end))
 	 (visible-start (plist-get elem-at-point :visible-start))
 	 (visible-end (plist-get elem-at-point :visible-end)))
+    (when (and (eq org-appear-autolinks 'just-brackets)
+	       (eq elem-type 'link))
+      (setq start (1- visible-start))
+      (setq end (1+ visible-end)))
     (with-silent-modifications
       (cond ((eq elem-type 'entity)
 	     (decompose-region start end))
@@ -353,14 +357,14 @@ Return nil if element cannot be parsed."
 	       (decompose-region start end)))
 	    ((eq elem-type 'keyword)
 	     (remove-text-properties start end '(invisible org-link)))
-	    ((and (eq elem-type 'link)
-		  (eq org-appear-autolinks 'just-brackets))
-	     (remove-text-properties visible-end
-				     (1+ visible-end)
-				     '(invisible org-link))
-	     (remove-text-properties (1- visible-start)
+	    ((and (featurep 'org-fold)
+		  (eq elem-type 'link))
+	     (remove-text-properties start
 				     visible-start
-				     '(invisible org-link)))
+				     (list (org-fold-core--property-symbol-get-create 'org-link) nil))
+	     (remove-text-properties visible-end
+				     end
+				     (list (org-fold-core--property-symbol-get-create 'org-link) nil)))
 	    (t
 	     (remove-text-properties start visible-start '(invisible org-link))
 	     (remove-text-properties visible-end end '(invisible org-link)))))))
@@ -390,12 +394,26 @@ When RENEW is non-nil, obtain element at point instead."
 	 (visible-start (plist-get elem-at-point :visible-start))
 	 (visible-end (plist-get elem-at-point :visible-end)))
     (when elem-at-point
+      (when (and (eq org-appear-autolinks 'just-brackets)
+		 (eq elem-type 'link))
+	(setq start (1- visible-start))
+	(setq end (1+ visible-end)))
       (with-silent-modifications
 	(cond ((eq elem-type 'entity)
 	       (compose-region start end (org-element-property :utf-8 elem))
 	       (font-lock-flush start end))
 	      ((memq elem-type '(keyword latex-fragment latex-environment))
 	       (font-lock-flush start end))
+	      ((and (featurep 'org-fold)
+		    (eq elem-type 'link))
+	       (put-text-property start
+				  visible-start
+				  (org-fold-core--property-symbol-get-create 'org-link)
+				  'org-link)
+	       (put-text-property visible-end
+				  end
+				  (org-fold-core--property-symbol-get-create 'org-link)
+				  'org-link))
 	      (t
 	       (put-text-property start visible-start 'invisible 'org-link)
 	       (put-text-property visible-end end 'invisible 'org-link)
