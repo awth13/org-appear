@@ -39,10 +39,11 @@ The package can be enabled interactively or automatically on Org mode start-up:
 
 By default, toggling is instantaneous and only emphasis markers are toggled. The following custom variables can be changed to enable additional functionality.
 
-- org-appear-autolinks :: if non-nil, toggle links
-- org-appear-autosubmarkers :: if non-nil, toggle subscripts and superscripts
-- org-appear-autoentities :: if non-nil, toggle Org entitites
-- org-appear-autokeywords :: if non-nil, toggle keywords in ~org-hidden-keywords~
+- org-appear-autoemphasis :: if non-nil and ~org-hide-emphasis-markers~ is on, toggle emphasis markers
+- org-appear-autolinks :: if non-nil and ~org-link-descriptive~ is on, toggle links
+- org-appear-autosubmarkers :: if non-nil and ~org-pretty-entities~ is on, toggle subscripts and superscripts
+- org-appear-autoentities :: if non-nil and ~org-pretty-entities~ is on, toggle Org entitites
+- org-appear-autokeywords :: if non-nil and ~org-hidden-keywords~ is on, toggle keywords in ~org-hidden-keywords~
 - org-appear-inside-latex :: if non-nil, toggle entities and sub/superscripts in LaTeX fragments
 - org-appear-delay :: seconds of delay before toggling
 - org-appear-trigger :: when to toggle elements
