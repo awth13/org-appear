@@ -15,6 +15,17 @@ Make invisible parts of Org elements appear visible.
 
 The easiest way to install ~org-appear~ is from MELPA, using your favourite package manager or ~package-install~. For Guix users, ~org-appear~ is also available in the official GNU Guix channel.
 
+*** Example ~use-package~ config
+This code example will automatically turn on ~org-appear-mode~ and after it is loaded it will make the emphasis markers hide (so that you can make the appear)
+
+#+begin_src emacs-lisp
+
+ (use-package org-appear
+   :hook (org-mode . org-appear-mode)
+   :config (setq org-hide-emphasis-markers t))
+
+#+end_src
+
 ** Manual installation
 
 With [[https://github.com/raxod502/straight.el][straight.el]], simply put the following line in ~init.el~:
