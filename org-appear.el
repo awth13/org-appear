@@ -272,8 +272,8 @@ Return nil if element is not supported by `org-appear-mode'."
 	   (link-ignore-p (and (eq elem-type 'link)
 			       (or (string-match-p "[Cc]ite"
 						   (org-element-property :type elem))
-				   (eq 'plain
-				       (org-element-property :format elem)))))
+				   (memq (org-element-property :format elem)
+					 '(plain angle)))))
 	   (key-ignore-p (and (eq elem-type 'keyword)
 			      (not (memq (intern (downcase
 						  (org-element-property :key elem)))
