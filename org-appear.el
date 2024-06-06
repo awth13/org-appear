@@ -189,9 +189,9 @@ nil if the cursor was not on an element.")
   "This function is executed by `post-command-hook' in `org-appear-mode'.
 It handles toggling elements depending on whether the cursor entered or exited them."
   (let* ((prev-elem org-appear--prev-elem)
-	 (prev-elem-start (org-element-property :begin prev-elem))
+	 (prev-elem-start (org-element-begin prev-elem))
 	 (current-elem (org-appear--current-elem))
-	 (current-elem-start (org-element-property :begin current-elem)))
+	 (current-elem-start (org-element-begin current-elem)))
 
     ;; After leaving an element
     (when (and prev-elem
@@ -267,8 +267,8 @@ It hides elements before commands that modify the buffer based on column width."
 Return nil if element is not supported by `org-appear-mode'."
   (when-let ((elem (org-element-context)))
     (let* ((elem-type (car elem))
-	   (elem-end (- (org-element-property :end elem)
-			(1- (org-element-property :post-blank elem))))
+	   (elem-end (- (org-element-end elem)
+			(1- (org-element-post-blank elem))))
 	   (link-ignore-p (and (eq elem-type 'link)
 			       (or (string-match-p "[Cc]ite"
 						   (org-element-property :type elem))
@@ -313,13 +313,13 @@ Return nil if element cannot be parsed."
 			 ((memq elem-type '(latex-fragment latex-environment))
 			  'latex-fragment)
 			 (t nil)))
-	 (elem-start (org-element-property :begin elem))
-	 (elem-end (org-element-property :end elem))
-	 (elem-content-start (org-element-property :contents-begin elem))
-	 (elem-content-end (org-element-property :contents-end elem))
+	 (elem-start (org-element-begin elem))
+	 (elem-end (org-element-end elem))
+	 (elem-content-start (org-element-contents-begin elem))
+	 (elem-content-end (org-element-contents-end elem))
 	 ;; Some elements have extra spaces at the end
 	 ;; The number of spaces is stored in the post-blank property
-	 (post-elem-spaces (org-element-property :post-blank elem))
+	 (post-elem-spaces (org-element-post-blank elem))
 	 (elem-end-real (- elem-end post-elem-spaces)))
     ;; Only sub/superscript elements are guaranteed to have
     ;; contents-begin and contents-end properties
@@ -378,8 +378,8 @@ When RENEW is non-nil, obtain element at point instead."
     (setq org-appear--prev-elem elem)
     (setq org-appear--timer nil))
 
-  (when-let ((elem-start (org-element-property :begin elem))
-	     (elem-end (org-element-property :end elem)))
+  (when-let ((elem-start (org-element-begin elem))
+	     (elem-end (org-element-end elem)))
     ;; Call `font-lock-ensure' before unhiding to prevent `jit-lock-mode'
     ;; from refontifying the element region after changes in buffer
     (font-lock-ensure elem-start elem-end)
