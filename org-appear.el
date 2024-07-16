@@ -187,7 +187,8 @@ nil if the cursor was not on an element.")
 
 (defun org-appear--post-cmd ()
   "This function is executed by `post-command-hook' in `org-appear-mode'.
-It handles toggling elements depending on whether the cursor entered or exited them."
+It handles toggling elements depending on whether the cursor
+entered or exited them."
   (let* ((prev-elem org-appear--prev-elem)
 	 (prev-elem-start (org-element-begin prev-elem))
 	 (current-elem (org-appear--current-elem))
