@@ -358,7 +358,8 @@ Return nil if element cannot be parsed."
 	    ((eq elem-type 'keyword)
 	     (remove-text-properties start end '(invisible org-link)))
 	    ((and (featurep 'org-fold)
-		  (eq elem-type 'link))
+		  (eq elem-type 'link)
+		  (eq org-fold-core-style 'text-properties))
 	     (remove-text-properties start
 				     visible-start
 				     (list (org-fold-core--property-symbol-get-create 'org-link) nil))
@@ -405,7 +406,8 @@ When RENEW is non-nil, obtain element at point instead."
 	      ((memq elem-type '(keyword latex-fragment latex-environment))
 	       (font-lock-flush start end))
 	      ((and (featurep 'org-fold)
-		    (eq elem-type 'link))
+		    (eq elem-type 'link)
+		    (eq org-fold-core-style 'text-properties))
 	       (put-text-property start
 				  visible-start
 				  (org-fold-core--property-symbol-get-create 'org-link)
