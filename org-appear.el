@@ -4,10 +4,10 @@
 ;; org-fragtog Copyright (C) 2020 Benjamin Levy - MIT/X11 License
 ;; org-appear Copyright (C) 2021 Alice Istleyeva - MIT License
 ;; Author: Alice Istleyeva <awth13@gmail.com>
-;; Version: 0.3.0
+;; Version: 0.3.1
 ;; Description: Toggle Org mode element visibility upon entering and leaving
 ;; Homepage: https://github.com/awth13/org-appear
-;; Package-Requires: ((emacs "25.1") (org "9.3"))
+;; Package-Requires: ((emacs "29.1") (org "9.3"))
 
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
 ;; of this software and associated documentation files (the "Software"), to deal
@@ -358,7 +358,8 @@ Return nil if element cannot be parsed."
 	    ((eq elem-type 'keyword)
 	     (remove-text-properties start end '(invisible org-link)))
 	    ((and (featurep 'org-fold)
-		  (eq elem-type 'link))
+		  (eq elem-type 'link)
+		  (eq org-fold-core-style 'text-properties))
 	     (remove-text-properties start
 				     visible-start
 				     (list (org-fold-core--property-symbol-get-create 'org-link) nil))
@@ -405,7 +406,8 @@ When RENEW is non-nil, obtain element at point instead."
 	      ((memq elem-type '(keyword latex-fragment latex-environment))
 	       (font-lock-flush start end))
 	      ((and (featurep 'org-fold)
-		    (eq elem-type 'link))
+		    (eq elem-type 'link)
+		    (eq org-fold-core-style 'text-properties))
 	       (put-text-property start
 				  visible-start
 				  (org-fold-core--property-symbol-get-create 'org-link)
